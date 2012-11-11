@@ -1,0 +1,20 @@
+citHeader("To cite tmle in publications use:")
+
+citEntry(entry = "Article",
+  title        = "{tmle}: An {R} Package for  Targeted Maximum Likelihood Estimation",
+  author       = personList(as.person("Susan Gruber"),
+                   person(c("Mark", "J."), "van der Laan")),
+  journal      = "Journal of Statistical Software",
+  year         = "2012",
+  volume       = "51",
+  number       = "13",
+  pages        = "1--35",
+  url          = "http://www.jstatsoft.org/v51/i13/",
+
+  textVersion  =
+  paste("Susan Gruber, Mark J. van der Laan (2012).",
+        "tmle: An R Package for  Targeted Maximum Likelihood Estimation.",
+        "Journal of Statistical Software, 51(13), 1-35.",
+        "URL http://www.jstatsoft.org/v51/i13/.")
+)
+

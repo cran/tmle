@@ -1,0 +1,35 @@
+Changes/Bug Fixes in Version 1.2.0 -2
+
+-- Added cite to Journal of Statistical Software publication, "tmle: An R Package for  Targeted Maximum Likelihood Estimation", 51(13), 1-35,
+http://www.jstatsoft.org/v51/i13/
+
+-- License change to BSD-2
+
+Changes/Bug Fixes in Version 1.2.0 -1
+
+-- FEV dataset included withing the package
+
+-- Update examples for tmleMSM()
+
+Changes/Bug Fixes in Version 1.2.0
+
+-- New tmleMSM() function for estimating parameters of an arbitry MSM. Type help(tmleMSM) for details.
+
+-- Now works with SuperLearner versions 1.0 through 2.0-6
+
+    -- Default SuperLearner libraries for Q and g are now set to (SL.glm, SL.step, SL.glm.interaction), 
+        all of which are included in the base installation of R.  
+
+    -- Specifying SuperLearner screening algorithms within calls to SuperLearner is not supported. 
+
+    -- If SuperLearner fails while estimating Q, the program quits instead of defaulting to main terms
+       regression with glm.  But, if a call to SuperLearner fails when estimating g, the program prints a
+       warning message, and defaults to estimating g with main terms regression.  This way, initial 
+       estimate of Q, will be returned, and can be supplied to the next invocation of the function 
+       without having to be be re-calculated.
+
+-- Interaction terms now allowed in user-specified formulas for estimating Q and g 
+
+-- Factors are allowed in covariate matrix W, but will only work correctly when glm is used to estimate 
+   Q and g. (Super Learner does not support factors. Conversion to dummy variables is recommended)
+
