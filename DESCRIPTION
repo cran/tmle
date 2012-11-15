@@ -1,8 +1,8 @@
 Package: tmle
 Type: Package
 Title: Targeted Maximum Likelihood Estimation
-Version: 1.2.0-2
-Date: 2012-11-11
+Version: 1.2.0-3
+Date: 2012-11-15
 Author: Susan Gruber, in collaboration with Mark van der Laan
 Maintainer: Susan Gruber <sgruber@cal.berkeley.edu>
 Copyright: Copyright 2012. The Regents of the University of California
@@ -27,10 +27,10 @@ Description: tmle implements targeted maximum likelihood estimation,
         call SuperLearner to estimate the Q and g portions of the
         likelihood, unless values or a user-supplied regression
         function are passed in as arguments.
-License: BSD
+License: BSD | GPL-2
 URL: http://cran.r-project.org/package=tmle
-Packaged: 2012-11-14 13:51:30 UTC; Susan
+Packaged: 2012-11-15 16:31:11 UTC; Susan
 X-CRAN-Comment: Older versions were removed as it became clear that the
         license stated did not cover the package.
 Repository: CRAN
-Date/Publication: 2012-11-14 14:11:37
+Date/Publication: 2012-11-15 17:28:43

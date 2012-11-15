@@ -1,11 +1,15 @@
-Changes/Bug Fixes in Version 1.2.0 -2
+Changes/Bug Fixes in Version 1.2.0-3
+
+-- Licences change to BSD | GPL-2
+
+Changes/Bug Fixes in Version 1.2.0-2
 
 -- Added cite to Journal of Statistical Software publication, "tmle: An R Package for  Targeted Maximum Likelihood Estimation", 51(13), 1-35,
 http://www.jstatsoft.org/v51/i13/
 
--- License change to BSD-2
+-- License change to BSD 
 
-Changes/Bug Fixes in Version 1.2.0 -1
+Changes/Bug Fixes in Version 1.2.0-1
 
 -- FEV dataset included withing the package
 
