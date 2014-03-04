@@ -1,5 +1,5 @@
 \name{tmle}
-\Rdversion{1.2.0-3}
+\Rdversion{1.2.0-4}
 \alias{tmle}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{Targeted Maximum Likelihood Estimation}
@@ -7,9 +7,9 @@
 Targeted maximum likelihood estimation of parameters of a marginal structural model, and of marginal treatment effects of a binary point treatment on an outcome. In addition to the additive treatment effect, risk ratio and odds ratio estimates are reported for binary outcomes. The \code{tmle} function is generally called with arguments \code{(Y,A,W)}, where  \code{Y} is a continuous or binary outcome variable, \code{A} is a binary treatment variable, (\code{A=1} for treatment, \code{A=0} for control), and \code{W} is a matrix or dataframe of baseline covariates. The population mean outcome is calculated when there is no variation in \code{A}. If values of binary mediating variable \code{Z} are supplied, estimates are returned at each level of \code{Z}. Missingness in the outcome is accounted for in the estimation procedure if missingness indicator \code{Delta} is 0 for some observations.  Repeated measures can be identified using the \code{id} argument.}
 \usage{
 tmle(Y, A, W, Z=NULL, Delta = rep(1,length(Y)), Q = NULL, Q.Z1 = NULL, Qform = NULL, 
-     Qbounds = NULL, Q.SL.library = c("SL.glm", "SL.step", "SL.glm.interaction"),  
-     cvQinit = FALSE, g1W = NULL, gform = NULL, gbound = 0.025,  pZ1=NULL, g.Zform = NULL, 
-     pDelta1 = NULL, g.Deltaform = NULL, 
+     Qbounds = NULL, Q.SL.library = c("SL.glm", "SL.step", "SL.glm.interaction"), 
+     cvQinit = FALSE, g1W = NULL, gform = NULL, gbound = 0.025,  pZ1=NULL,
+     g.Zform = NULL, pDelta1 = NULL, g.Deltaform = NULL, 
      g.SL.library = c("SL.glm", "SL.step", "SL.glm.interaction"),
      family = "gaussian", fluctuation = "logistic", alpha = 0.995, id=1:length(Y), 
      verbose = FALSE)

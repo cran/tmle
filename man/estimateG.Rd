@@ -1,5 +1,5 @@
 \name{estimateG}
-\Rdversion{1.2.0-3}
+\Rdversion{1.2.0-4}
 \alias{estimateG}
 \title{Estimate Treatment or Missingness Mechanism}
 \description{

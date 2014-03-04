@@ -1,5 +1,5 @@
 \name{estimateQ}
-\Rdversion{1.2.0-3}
+\Rdversion{1.2.0-4}
 \alias{estimateQ}
 \title{
 Initial Estimation of Q portion of the Likelihood}

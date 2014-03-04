@@ -1,2 +1,5 @@
+## name spaces needed for S3 methods
+import(SuperLearner)
+
 ##
 exportPattern("^[^\\\\.]")

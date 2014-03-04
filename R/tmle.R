@@ -788,7 +788,7 @@ tmleMSM <- function(Y,A,W,V,T=rep(1,length(Y)), Delta=rep(1, length(Y)), MSM, v=
 	n_predictors <-length(SL.library)
 	CDE <- length(unique(X[,1])) > 1
 
-	if(NCOL(X) > 1 & require(SuperLearner)){
+	if(NCOL(X) > 1){
 		newX <- rbind(X,X,X,X,X)
 		newX[(n+1):(3*n),1]   <- 0 
 		newX[(3*n+1):(5*n),1] <- 1
@@ -907,18 +907,17 @@ estimateQ <- function (Y,Z,A,W, Delta, Q, Qbounds, Qform, maptoYstar,
   	  				Q <- Qinit$Q
   	  			}
   	  		} else {
-  	  			if(require(SuperLearner)){
-  					if(verbose) {cat("\t using SuperLearner\n")}
-  					n <- length(Y)
-  					X <- data.frame(Z,A,W)
-  					X00 <- data.frame(Z=0,A=0, W)
-  					X01 <- data.frame(Z=0,A=1, W)
-  					newX <- rbind(X, X00, X01)
-  					if(CDE) {
-  						X10 <- data.frame(Z=1,A=0, W)
-  						X11 <- data.frame(Z=1,A=1, W)
-  						newX <- rbind(newX, X10, X11)
-  					}
+  				if(verbose) {cat("\t using SuperLearner\n")}
+  				n <- length(Y)
+  				X <- data.frame(Z,A,W)
+  				X00 <- data.frame(Z=0,A=0, W)
+  				X01 <- data.frame(Z=0,A=1, W)
+  				newX <- rbind(X, X00, X01)
+  				if(CDE) {
+  					X10 <- data.frame(Z=1,A=0, W)
+  					X11 <- data.frame(Z=1,A=1, W)
+  					newX <- rbind(newX, X10, X11)
+  				}
   				if(packageDescription("SuperLearner")$Version < SL.version){
     				arglist <- list(Y=Y[Delta==1],X=X[Delta==1,], newX=newX, SL.library=SL.library,
   							V=5, family=family, save.fit.library=FALSE, id=id[Delta==1])
@@ -941,7 +940,7 @@ estimateQ <- function (Y,Z,A,W, Delta, Q, Qbounds, Qform, maptoYstar,
   	  			} else {
   	  				stop("Super Learner failed when estimating Q. Exiting program\n")
   	  			} 
-  	  } } }
+  	   } }
   	} 
   	if(is.na(Q[1,1]) | identical(class(m), "try-error")){
   	  		if(verbose) {cat("\t Running main terms regression for 'Q' using glm\n")}
@@ -1015,23 +1014,21 @@ estimateG <- function (d,g1W, gform,SL.library, id, verbose, message, outcome="A
 	} else {
   	  if (is.null(gform)){
   	  	SL.ok <- TRUE
-  		if(require(SuperLearner)){
-  			old.SL <- packageDescription("SuperLearner")$Version < SL.version
-  		 	if(old.SL){
-  		 		arglist <- list(Y=d[,1], X=d[,-1, drop=FALSE], newX=newdata[,-1, drop=FALSE], family="binomial", SL.library=SL.library, V=5, id=id)
-  			 } else {
-  		 		arglist <- list(Y=d[,1], X=d[,-1, drop=FALSE], newX=newdata[,-1, drop=FALSE], family="binomial", SL.library=SL.library, cvControl=list(V=5), id=id)
-  		 	}
-  			suppressWarnings(
-  				m <- try(do.call(SuperLearner,arglist))
-  			)
-  			if(identical(class(m),"SuperLearner")) {
-  				g1W <- as.vector(m$SL.predict)
-  			} else {
-  				SL.ok <- FALSE
-  				cat("Error estimating g using SuperLearner. Defaulting to glm\n")
-  			}
-  	    } 
+  		old.SL <- packageDescription("SuperLearner")$Version < SL.version
+  		if(old.SL){
+  			arglist <- list(Y=d[,1], X=d[,-1, drop=FALSE], newX=newdata[,-1, drop=FALSE], family="binomial", SL.library=SL.library, V=5, id=id)
+  		} else {
+  		 	arglist <- list(Y=d[,1], X=d[,-1, drop=FALSE], newX=newdata[,-1, drop=FALSE], family="binomial", SL.library=SL.library, cvControl=list(V=5), id=id)
+  		}
+  		suppressWarnings(
+  			m <- try(do.call(SuperLearner,arglist))
+  		)
+  		if(identical(class(m),"SuperLearner")) {
+  			g1W <- as.vector(m$SL.predict)
+  		} else {
+  			SL.ok <- FALSE
+  			cat("Error estimating g using SuperLearner. Defaulting to glm\n")
+  		}
   	    if (!SL.ok){
   			if(verbose){cat("\tRunning main terms regression for 'g' using glm\n")}
 			form <- paste(paste(colnames(d)[1],"~1"), paste(colnames(d)[-1], collapse = "+"), sep="+")  

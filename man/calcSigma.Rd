@@ -1,11 +1,13 @@
 \name{calcSigma}
-\Rdversion{1.2.0-3}
+\Rdversion{1.2.0-4}
 \alias{calcSigma}
 \title{Calculate Variance-Covariance Matrix for MSM Parameters (calcSigma)}
 \description{
-An internal function called by the \code{tmleMSM} function to calculate the variance-covariance matrix of the parameter estimates based on the influence curve of the specified MSM.}
+An internal function called by the \code{tmleMSM} function to calculate the variance-covariance matrix of the 
+parameter estimates based on the influence curve of the specified MSM.}
 \usage{
-calcSigma(hAV, gAVW, Y, Q, mAV, covar.MSM, covar.MSMA0, covar.MSMA1, I.V, Delta, ub, id, family)
+calcSigma(hAV, gAVW, Y, Q, mAV, covar.MSM, covar.MSMA0, covar.MSMA1, I.V, 
+     Delta, ub, id, family)
 }
 \arguments{
   \item{hAV}{values used in numerator of weights applied to the estimation procedure}
@@ -20,7 +22,7 @@ calcSigma(hAV, gAVW, Y, Q, mAV, covar.MSM, covar.MSMA0, covar.MSMA1, I.V, Delta,
   \item{Delta}{indicator of missing outcome. \code{1} - observed, \code{0} - missing}
   \item{ub}{upper bound on weights}
   \item{id}{subject identifier}
-  \item{family}{family specification for regressions, generally \sQuote{gaussian} for continuous oucomes, \sQuote{binomial} for binary outcomes}
+  \item{family}{\sQuote{gaussian} for continuous outcomes, \sQuote{binomial} for binary outcomes}
 }
 \value{
   \item{sigma}{influence-curve based variance-covariance matrix. See Rosenblum&vanderLaan2010 for details.}
