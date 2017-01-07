@@ -1,5 +1,5 @@
 \name{tmle}
-\Rdversion{1.2.0-4}
+\Rdversion{1.2.0-5}
 \alias{tmle}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{Targeted Maximum Likelihood Estimation}
@@ -11,7 +11,7 @@ tmle(Y, A, W, Z=NULL, Delta = rep(1,length(Y)), Q = NULL, Q.Z1 = NULL, Qform = N
      cvQinit = FALSE, g1W = NULL, gform = NULL, gbound = 0.025,  pZ1=NULL,
      g.Zform = NULL, pDelta1 = NULL, g.Deltaform = NULL, 
      g.SL.library = c("SL.glm", "SL.step", "SL.glm.interaction"),
-     family = "gaussian", fluctuation = "logistic", alpha = 0.995, id=1:length(Y), 
+     family = "gaussian", fluctuation = "logistic", alpha = 0.995, id=1:length(Y), V = 5,
      verbose = FALSE)
 }
 \arguments{
@@ -38,6 +38,7 @@ tmle(Y, A, W, Z=NULL, Delta = rep(1,length(Y)), Q = NULL, Q.Z1 = NULL, Qform = N
   \item{fluctuation}{\sQuote{logistic} (default), or \sQuote{linear}}
   \item{alpha}{used to keep predicted initial values bounded away from (0,1) for logistic fluctuation}
   \item{id}{optional subject identifier}
+  \item{V}{Number of cross-validation folds for Super Learning to estimate Q and g}
   \item{verbose}{status messages printed if set to \code{TRUE} (default=\code{FALSE})}
 }
 \details{

@@ -1,5 +1,5 @@
 \name{estimateQ}
-\Rdversion{1.2.0-4}
+\Rdversion{1.2.0-5}
 \alias{estimateQ}
 \title{
 Initial Estimation of Q portion of the Likelihood}
@@ -8,7 +8,7 @@ An internal function called by the \code{tmle} function to obtain an initial est
 }
 \usage{
 estimateQ(Y, Z, A, W, Delta, Q, Qbounds, Qform, maptoYstar, SL.library, cvQinit, 
-    family, id, verbose)
+    family, id, V, verbose)
 }
 \arguments{
   \item{Y}{continuous or binary outcome variable}
@@ -24,6 +24,7 @@ estimateQ(Y, Z, A, W, Delta, Q, Qbounds, Qform, maptoYstar, SL.library, cvQinit,
  \item{cvQinit}{logical, whether or not to estimate cross-validated values for initial \code{Q}, default=\code{FALSE}}
   \item{family}{family specification for regressions, generally \sQuote{gaussian} for continuous oucomes, \sQuote{binomial} for binary outcomes}
   \item{id}{subject identifier}
+  \item{V}{Number of cross-validation folds for Super Learning}
   \item{verbose}{status message printed if set to \code{TRUE}}
 }
 \value{

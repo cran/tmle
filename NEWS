@@ -1,3 +1,9 @@
+Changes/Bug Fixes in Version 1.2.0-5
+
+-- Updated to be compatible with SuperLearner v2.0-21. SL.glm.interaction no longer masked. 
+
+-- Option to specify number of cross-validation folds for SL estimation of Q and g, default remains V = 5.
+
 Changes/Bug Fixes in Version 1.2.0-4
 
 -- Licences change to BSD_3_clause + file LICENSE | GPL-2

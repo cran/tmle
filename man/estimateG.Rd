@@ -1,12 +1,12 @@
 \name{estimateG}
-\Rdversion{1.2.0-4}
+\Rdversion{1.2.0-5}
 \alias{estimateG}
 \title{Estimate Treatment or Missingness Mechanism}
 \description{
 An internal function called by the \code{tmle} function to obtain an estimate of conditional treatment assignment probabiliites \eqn{P(A=1|W)}, and conditional probabilites for missingness, \eqn{P(Delta=1|A,W)}.  The estimate can be  based on user-supplied values, a user-supplied regression formula, or a data-adaptive super learner fit.  If the \code{SuperLearner} package is not available, and there are no user-specifications, estimation is carried out using main terms regression with \code{glm}.  These main terms-based estimates may yield poor results.
 }
 \usage{
-estimateG(d, g1W, gform, SL.library, id, verbose, message, outcome, newdata=d)
+estimateG(d, g1W, gform, SL.library, id, V, verbose, message, outcome, newdata=d)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -15,6 +15,7 @@ estimateG(d, g1W, gform, SL.library, id, verbose, message, outcome, newdata=d)
   \item{gform}{regression formula of the form \code{A~W1}, (dependent variable is one of \eqn{A,Z,D}) if specified this overrides the call to \code{SuperLearner}}
   \item{SL.library}{vector of prediction algorithms used by \code{SuperLearner}, default value is (\sQuote{SL.glm}, \sQuote{SL.step}, \sQuote{SL.glm.interaction})}
   \item{id}{subject identifier}
+  \item{V}{Number of cross validation folds for Super Learning}
   \item{verbose}{status messages printed if set to TRUE}
   \item{message}{text specifies whether treatment or missingness mechanism is being estimated}
   \item{outcome}{\code{A, D, Z} to indicate which quantity is being estimated.}

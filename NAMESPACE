@@ -1,5 +1,17 @@
 ## name spaces needed for S3 methods
 import(SuperLearner)
-
+importFrom("stats", "as.formula", "binomial", "coef", "formula",
+             "gaussian", "glm", "model.frame", "model.matrix", "plogis",
+             "pnorm", "poisson", "predict", "qlogis", "var")
+importFrom("utils", "RShowDoc", "packageDescription")
+S3method(print, tmle)
+S3method(print, tmle.list)
+S3method(print, summary.tmle)
+S3method(print, summary.tmle.list)
+S3method(print, tmleMSM)
+S3method(print, summary.tmleMSM)
+S3method(summary, tmle)
+S3method(summary, tmle.list)
+S3method(summary, tmleMSM)
 ##
 exportPattern("^[^\\\\.]")

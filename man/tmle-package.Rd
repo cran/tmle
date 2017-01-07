@@ -1,5 +1,5 @@
 \name{tmle-package}
-\Rdversion{1.2.0-4}
+\Rdversion{1.2.0-5}
 \alias{tmle-package}
 \docType{package}
 \title{Targeted Maximum Likelihood Estimation with Super Learning}
@@ -9,15 +9,15 @@ Targeted maximum likelihood estimation of marginal treatment effect of a binary 
 \tabular{ll}{
 Package: \tab tmle\cr
 Type: \tab Package\cr
-Version: \tab 1.2.0-3\cr
-Date: \tab 2012-11-15\cr
+Version: \tab 1.2.0-5\cr
+Date: \tab 2017-01-06\cr
 License: \tab BSD | GPL-2 \cr
 } 
 }
 \author{
 Susan Gruber, in collaboration with Mark van der Laan.
 
-Maintainer: Susan Gruber, \email{sgruber@cal.berkeley.edu}
+Maintainer: Susan Gruber, \email{sgruber65@yahoo.com}
 }
 \references{
 1. Gruber, S. and van der Laan, M.J. (2012), {tmle: An R Package for Targeted Maximum Likelihood Estimation}. \emph{Journal of Statistical Software}, 51(13), 1-35. \url{http://www.jstatsoft.org/v51/i13/}

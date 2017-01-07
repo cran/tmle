@@ -1,23 +1,3 @@
-# July 3, 2012
-# With Noemi - add starting values for fitting epsilon start = c(0,0)
-# Targeted Maximum Likelihood Estimation
-# for non-parametric estimation of the marginal effect of a binary point
-# treatment, adjusting for treatment (g) and missingness (g.Delta) mechanisms
-# Parameters include: additive treatment effect: E_W[E(Y|A=1,W) - E(Y|A=0,W)]
-# and, for binary outcomes, relative risk(RR) and odds ratio(RR)
-#   mu1 = E_W[E(Y|A=1,W)], mu0 = E_W[E(Y|A=0,W)]
-#   RR = mu1/mu0
-#   OR =  mu1/(1-mu1)/(mu0 / (1-mu0))
-# Controlled direct effect estimation available for optional binary Z intermediate variable,
-# (P(DeltaY|Z,A,W, Delta=1)P(Delta|Z,A,W)P(Z|A,W)P(A|W)P(W))
-# EY1 parameter estimated when there is missinginess and no treatment assignment
-# author: Susan Gruber, sgruber@berkeley.edu
-# date:   September 25, 2010
-# revised: December 20, 2010
-#          March 22, 2012 
-# Models or estimated values for Q, g, g.Z, g.Delta can be user-supplied or 
-# estimated using super learner.  Cross-validated inital Q can be obtained
-# by specifying cvQinit=TRUE
 
 tmleNews <- function(...){
 	RShowDoc("NEWS", package="tmle",...)
@@ -447,17 +427,6 @@ print.tmleMSM <- function(x,...) {
  		stop("Error calling print.tmle. 'x' needs to have class 'tmle'\n")
  }}
 
-# This is defined differently in SL v 2.0+, undefined in SL <2.0
-SL.glm.interaction <- function (Y.temp, X.temp, newX.temp, family, obsWeights, ...) 
-{
-    fit.glm <- glm(Y.temp ~ .^2, data = X.temp, family = family, weights = obsWeights)
-    out <- predict(fit.glm, newdata = newX.temp, type = "response")
-    fit <- list(object = fit.glm)
-    class(fit) <- "SL.glm"
-    foo <- list(out=out, fit = fit)
-    return(foo)
-}
-
 
 # Computes the variance/covariance matrix for all params in the IC.
 calcSigma <- function(hAV, gAVW, Y, Q, mAV, covar.MSM, covar.MSMA0, covar.MSMA1, I.V, Delta, ub, id, family){
@@ -509,7 +478,7 @@ tmleMSM <- function(Y,A,W,V,T=rep(1,length(Y)), Delta=rep(1, length(Y)), MSM, v=
 				pDelta1=NULL, g.Deltaform=NULL, 
 				g.SL.library=c("SL.glm", "SL.step", "SL.glm.interaction"), ub = 1/0.025, 
 				family="gaussian", fluctuation="logistic", alpha  = 0.995,
-				id=1:length(Y), inference=TRUE, verbose=FALSE) {
+				id=1:length(Y), V_SL=5, inference=TRUE, verbose=FALSE) {
 	Y[is.na(Y)] <- 0
 	n <- length(Y)
 	n.id <- length(unique(id))
@@ -543,11 +512,11 @@ tmleMSM <- function(Y,A,W,V,T=rep(1,length(Y)), Delta=rep(1, length(Y)), MSM, v=
 	Qinit <- suppressWarnings(estimateQ(Y=stage1$Ystar,Z=rep(1, length(Y)), A=A, 
 			W=cbind(W,V,T), Delta=(I.V==1 & Delta==1),
 			Q=stage1$Q, Qbounds=stage1$Qbounds, Qform=Qform, maptoYstar = maptoYstar,
-			SL.library=Q.SL.library, cvQinit=cvQinit, family=family, id=id, verbose=verbose))
+			SL.library=Q.SL.library, cvQinit=cvQinit, family=family, id=id, V = V_SL, verbose=verbose))
 
 #---- Stage 2 -----
     if(is.null(hAV)){
-    	gAV <- suppressWarnings(estimateG(d=data.frame(A,V,T), hAV, hAVform,g.SL.library, id, verbose, 
+    	gAV <- suppressWarnings(estimateG(d=data.frame(A,V,T), hAV, hAVform,g.SL.library, id, V=V_SL, verbose, 
     			message="h(A,V)", outcome="A"))
 		hAV <- cbind((1-A)*(1-gAV$g1W) + A*gAV$g1W, 1-gAV$g1W, gAV$g1W)
 	} else {
@@ -559,10 +528,10 @@ tmleMSM <- function(Y,A,W,V,T=rep(1,length(Y)), Delta=rep(1, length(Y)), MSM, v=
 	}
 	colnames(hAV) <- c("hAV", "h0V", "h1V")
 	if (is.null(v)){
-		g <- suppressWarnings(estimateG(d=data.frame(A,V,W,T), g1W, gform,g.SL.library, id, verbose, 
+		g <- suppressWarnings(estimateG(d=data.frame(A,V,W,T), g1W, gform,g.SL.library, id, V=V_SL, verbose, 
     			message="treatment mechanism", outcome="A"))
 	} else {	
-		g <- suppressWarnings(estimateG(d=data.frame(A,V,W,T), g1W, gform,g.SL.library, id, verbose, 
+		g <- suppressWarnings(estimateG(d=data.frame(A,V,W,T), g1W, gform,g.SL.library, id, V=V_SL, verbose, 
     			message="treatment mechanism", outcome="A", newdata=data.frame(A,V=v, W,T)))
    }
    g$bound <- c(0,ub)
@@ -570,7 +539,7 @@ tmleMSM <- function(Y,A,W,V,T=rep(1,length(Y)), Delta=rep(1, length(Y)), MSM, v=
  		stop("Error estimating treatment mechanism (hint: only numeric variables are allowed)") 
  	}
  	g.Delta <- estimateG(d=data.frame(Delta, Z=1, A, W,V,T), pDelta1, g.Deltaform, 
- 		g.SL.library,id=id, verbose, "missingness mechanism", outcome="D") 
+ 		g.SL.library,id=id, V = V_SL, verbose, "missingness mechanism", outcome="D") 
 	g1VW <- g$g1W * g.Delta$g1W[,"Z0A1"]
 	g0VW <- (1-g$g1W) * g.Delta$g1W[,"Z0A0"]
 	gAVW <- A*g1VW + (1-A)*g0VW
@@ -673,6 +642,24 @@ tmleMSM <- function(Y,A,W,V,T=rep(1,length(Y)), Delta=rep(1, length(Y)), MSM, v=
 	return(all(ok))
 }
 
+#---------.sg.glm.interaction --------
+# Old versions of SL don't have SL.glm.interaction defined.  
+# This will define it.
+
+.sg.glm.interaction <- function (Y.temp, X.temp, newX.temp, family, obsWeights, ...) 
+{
+    fit.glm <- glm(Y.temp ~ .^2, data = X.temp, family = family, 
+        weights = obsWeights)
+    out <- predict(fit.glm, newdata = newX.temp, type = "response")
+    fit <- list(object = fit.glm)
+    class(fit) <- "SL.glm"
+    foo <- list(out = out, fit = fit)
+    return(foo)
+}
+
+if(!(exists("SL.glm.interaction"))){
+	SL.glm.interaction <- .sg.glm.interaction
+}
 #---------- function .setColnames ---------------
 # assign names to every unnamed column of x
 # arguments
@@ -863,6 +850,7 @@ tmleMSM <- function(Y,A,W,V,T=rep(1,length(Y)), Delta=rep(1, length(Y)), MSM, v=
 #   cvQinit - flag, if TRUE, cross-validate SL.
 # 	family - regression family
 #	id - subject identifier
+# V - number of cross-validation folds
 # returns matrix of linear predictors for Q(A,W), Q(0,W), Q(1,W),
 #   (for controlled direct effect, 2 additional columns: Q(Z=1,A=0,W), Q(Z=1,A=1,W)) 
 #		family for stage 2 targeting
@@ -870,7 +858,7 @@ tmleMSM <- function(Y,A,W,V,T=rep(1,length(Y)), Delta=rep(1, length(Y)), MSM, v=
 # 		type, estimation method for Q
 #----------------------------------------
 estimateQ <- function (Y,Z,A,W, Delta, Q, Qbounds, Qform, maptoYstar, 
-		SL.library, cvQinit, family, id, verbose) {
+		SL.library, cvQinit, family, id, V, verbose) {
 	SL.version <- 2
 	Qfamily <- family
 	m <- NULL
@@ -900,7 +888,7 @@ estimateQ <- function (Y,Z,A,W, Delta, Q, Qbounds, Qform, maptoYstar,
   	  	} else {
   	  		if(cvQinit){
   	  			m <- try(.estQcvSL(Y,X=cbind(Z,A,W),SL.library, family=family, 
-  	  					Delta=Delta, Qbounds=Qbounds,id=id, verbose=verbose))
+  	  					Delta=Delta, Qbounds=Qbounds,id=id, V_SL = V, verbose=verbose))
   	  			if(!(identical(class(m), "try-error"))){
   	  				type <- "cross-validated SL"
   	  				Qinit <- m
@@ -920,10 +908,10 @@ estimateQ <- function (Y,Z,A,W, Delta, Q, Qbounds, Qform, maptoYstar,
   				}
   				if(packageDescription("SuperLearner")$Version < SL.version){
     				arglist <- list(Y=Y[Delta==1],X=X[Delta==1,], newX=newX, SL.library=SL.library,
-  							V=5, family=family, save.fit.library=FALSE, id=id[Delta==1])
+  							V=V, family=family, save.fit.library=FALSE, id=id[Delta==1])
   				} else {
     				arglist <- list(Y=Y[Delta==1],X=X[Delta==1,], newX=newX, SL.library=SL.library,
-    			 		cvControl=list(V=5), family=family, control = list(saveFitLibrary=FALSE), id=id[Delta==1])
+    			 		cvControl=list(V=V), family=family, control = list(saveFitLibrary=FALSE), id=id[Delta==1])
     				}
     				suppressWarnings(
     					m<- try(do.call(SuperLearner, arglist))
@@ -986,6 +974,7 @@ estimateQ <- function (Y,Z,A,W, Delta, Q, Qbounds, Qform, maptoYstar,
 # gform - optionalformula to use for glm
 # SL.library - algorithms to use for super learner estimation
 #   id - subject identifier
+#  V - number of cross-validation folds
 # verbose - flag, whether or not to print messages
 # message - printed when verbose=TRUE 
 # outcome - "A" for treatment, "Z" for intermediate variable,
@@ -995,7 +984,7 @@ estimateQ <- function (Y,Z,A,W, Delta, Q, Qbounds, Qform, maptoYstar,
 # d = [Z,A,W] for intermediate
 # d = [Delta, Z,A,W for missingness]
 #----------------------------------------
-estimateG <- function (d,g1W, gform,SL.library, id, verbose, message, outcome="A", newdata=d)  {
+estimateG <- function (d,g1W, gform,SL.library, id, V, verbose, message, outcome="A", newdata=d)  {
   SL.version <- 2
   SL.ok <- FALSE
   m <- NULL
@@ -1016,9 +1005,9 @@ estimateG <- function (d,g1W, gform,SL.library, id, verbose, message, outcome="A
   	  	SL.ok <- TRUE
   		old.SL <- packageDescription("SuperLearner")$Version < SL.version
   		if(old.SL){
-  			arglist <- list(Y=d[,1], X=d[,-1, drop=FALSE], newX=newdata[,-1, drop=FALSE], family="binomial", SL.library=SL.library, V=5, id=id)
+  			arglist <- list(Y=d[,1], X=d[,-1, drop=FALSE], newX=newdata[,-1, drop=FALSE], family="binomial", SL.library=SL.library, V=V, id=id)
   		} else {
-  		 	arglist <- list(Y=d[,1], X=d[,-1, drop=FALSE], newX=newdata[,-1, drop=FALSE], family="binomial", SL.library=SL.library, cvControl=list(V=5), id=id)
+  		 	arglist <- list(Y=d[,1], X=d[,-1, drop=FALSE], newX=newdata[,-1, drop=FALSE], family="binomial", SL.library=SL.library, cvControl=list(V=V), id=id)
   		}
   		suppressWarnings(
   			m <- try(do.call(SuperLearner,arglist))
@@ -1209,6 +1198,7 @@ calcParameters <- function(Y,A, I.Z, Delta, g1W, g0W, Q, mu1, mu0, id, family){
 # fluctuation - "logistic" (default) or "linear" (for targeting step)
 # alpha - bound on predicted probabilities for Q (0.005, 0.995 default)
 # id - optional subject identifier
+# V - number of cross-validation folds for SL estimation of Q and g
 # verbose - flag for controlling printing of messages
 #-------------------------------------------------------------------------------
 tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),  
@@ -1218,8 +1208,8 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
 				pZ1=NULL, g.Zform=NULL,
 				pDelta1=NULL, g.Deltaform=NULL, 
 				g.SL.library=c("SL.glm", "SL.step", "SL.glm.interaction"),
-				family="gaussian", fluctuation="logistic",
-				alpha  = 0.995, id=1:length(Y),verbose=FALSE) {
+				family="gaussian", fluctuation="logistic", 
+				alpha  = 0.995, id=1:length(Y), V = 5, verbose=FALSE) {
 	# Initializations
 	psi.tmle <- varIC <- CI <- pvalue <- NA
 	# W <- as.matrix(W)  # if W is a dataframe with factors, changing to matrix will blow it
@@ -1276,7 +1266,7 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
  	stage1 <- .initStage1(Y, A, Q, Q.Z1, Delta, Qbounds, alpha, maptoYstar, family)		
 	Q <- suppressWarnings(estimateQ(Y=stage1$Ystar,Z,A,W, Delta, Q=stage1$Q, Qbounds=stage1$Qbounds, Qform, 
 					maptoYstar=maptoYstar, SL.library=Q.SL.library, 
-					cvQinit=cvQinit, family=family, id=id, verbose=verbose))
+					cvQinit=cvQinit, family=family, id=id, V = V, verbose=verbose))
 					
 	# Stage 2
 	if(length(gbound)==1){
@@ -1286,7 +1276,7 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
 			gbound <- c(gbound, 1-gbound)
 		}
 	}
- 	g <- suppressWarnings(estimateG(d=data.frame(A,W), g1W, gform, g.SL.library, id=id, verbose, "treatment mechanism", outcome="A")) 
+ 	g <- suppressWarnings(estimateG(d=data.frame(A,W), g1W, gform, g.SL.library, id=id, V = V, verbose, "treatment mechanism", outcome="A")) 
  	g$bound <- gbound
  	if(g$type=="try-error"){
  		stop("Error estimating treatment mechanism (hint: only numeric variables are allowed)") 
@@ -1297,7 +1287,7 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
   		g.z$type="No intermediate variable"
   		g.z$coef=NA
   		g.Delta <- suppressWarnings(estimateG(d=data.frame(Delta, Z=1, A, W), pDelta1, g.Deltaform, 
- 	 		g.SL.library,id=id, verbose, "missingness mechanism", outcome="D")) 
+ 	 		g.SL.library,id=id, V = V, verbose = verbose, "missingness mechanism", outcome="D")) 
  		g1W.total <- .bound(g$g1W*g.Delta$g1W[,"Z0A1"], gbound)
   		g0W.total <- .bound((1-g$g1W)*g.Delta$g1W[,"Z0A0"], gbound)  
   		if(all(g1W.total==0)){g1W.total <- rep(10^-9, length(g1W.total))}
@@ -1328,10 +1318,10 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
   		class(returnVal) <- "tmle"
   	} else {
   		returnVal <- vector(mode="list", length=2)
-  		g.z <- suppressWarnings(estimateG(d=data.frame(Z,A,W), pZ1, g.Zform, g.SL.library, id=id, 
+  		g.z <- suppressWarnings(estimateG(d=data.frame(Z,A,W), pZ1, g.Zform, g.SL.library, id=id, V = V, 
   					  verbose, "intermediate variable", outcome="Z"))
   		g.Delta <- suppressWarnings(estimateG(d=data.frame(Delta,Z, A, W), pDelta1, g.Deltaform, 
-  								 g.SL.library,id=id, verbose, "missingness mechanism", outcome="D")) 
+  								 g.SL.library,id=id, V=V, verbose, "missingness mechanism", outcome="D")) 
     	ZAD <- cbind(D1Z0A0 = .bound((1-g$g1W)*(1-g.z$g1W[,"A0"])*g.Delta$g1W[,"Z0A0"], gbound),
   					  D1Z0A1 = .bound(g$g1W*(1-g.z$g1W[,"A1"])*g.Delta$g1W[,"Z0A1"], gbound),
   					  D1Z1A0 = .bound((1-g$g1W)*g.z$g1W[,"A0"]*g.Delta$g1W[,"Z1A0"], gbound),
@@ -1375,7 +1365,8 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
 
 
 
-#Copyright ©2012. The Regents of the University of California (Regents). All Rights Reserved. Permission to use, copy, modify, and distribute this software and its documentation for #educational, research, and not-for-profit purposes, without fee and without a signed licensing agreement, is hereby granted, provided that the above copyright notice, this paragraph and the #following two paragraphs appear in all copies, modifications, and distributions. Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue, Suite 510, Berkeley, CA #94720-1620, (510) 643-7201, for commercial licensing opportunities.
+#Copyright 2012. The Regents of the University of California (Regents). All Rights Reserved. Permission to use, copy, modify, and distribute this software and its documentation for #educational, research, and not-for-profit purposes, without fee and without a signed licensing agreement, is hereby granted, provided that the above copyright notice, this paragraph and the 
+#following two paragraphs appear in all copies, modifications, and distributions. Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue, Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, for commercial licensing opportunities.
 
 #[Created by Susan Gruber, Sam Lendle and Mark van der Laan, Department of Biostatistics, University of California, Berkeley.]
 

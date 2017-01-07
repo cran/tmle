@@ -1,5 +1,5 @@
 \name{summary.tmleMSM}
-\Rdversion{1.2.0-4}
+\Rdversion{1.2.0-5}
 \alias{summary.tmleMSM}
 \alias{print.summary.tmleMSM}
 \alias{print.tmleMSM}

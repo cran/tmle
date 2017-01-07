@@ -1,5 +1,5 @@
 \name{tmleMSM}
-\Rdversion{1.2.0-4}
+\Rdversion{1.2.0-5}
 \alias{tmleMSM}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
@@ -14,7 +14,7 @@ tmleMSM(Y, A, W, V, T = rep(1,length(Y)), Delta = rep(1, length(Y)), MSM,
         gform = NULL, pDelta1 = NULL, g.Deltaform = NULL, 
 	g.SL.library = c("SL.glm", "SL.step", "SL.glm.interaction"),
 	ub = 1/0.025, family = "gaussian", fluctuation = "logistic", 
-        alpha  = 0.995, id = 1:length(Y), inference = TRUE, verbose = FALSE) 
+        alpha  = 0.995, id = 1:length(Y), V_SL = 5, inference = TRUE, verbose = FALSE) 
 }
 \arguments{
   \item{Y}{continuous or binary outcome variable}
@@ -42,6 +42,7 @@ tmleMSM(Y, A, W, V, T = rep(1,length(Y)), Delta = rep(1, length(Y)), MSM,
   \item{fluctuation}{\sQuote{logistic} (default), or \sQuote{linear}}
   \item{alpha}{used to keep predicted initial values bounded away from (0,1) for logistic fluctuation}
   \item{id}{optional subject identifier}
+  \item{V_SL}{number of cross-validation folds for Super Learner estimation of Q and g}
   \item{inference}{if \code{TRUE}, variance-covariance matrix, standard errors, pvalues, and 95\% confidence intervals are calculated. Setting to FALSE saves a little time when bootstrapping.}
   \item{verbose}{status messages printed if set to \code{TRUE} (default=\code{FALSE})}
 }
