@@ -1,9 +1,9 @@
 \name{calcParameters}
-\Rdversion{1.2.0-5}
+\Rdversion{1.3.0}
 \alias{calcParameters}
 \title{Calculate Parameter Estimates (calcParameters)}
 \description{
-An internal function called by the \code{tmle} function to calculate the population mean effect when there is missingness in the data, but no treatment assignment.  When observations are in treatment and control groups, estimates the additive treatment effect, and if the outcome is binary, also the relative risk and odds ratio parameters.  P-values and 95\% confidence intervals are also calculated (on the log scale for RR and OR).
+An internal function called by the \code{tmle} function to calculate the population mean effect when there is missingness in the data, but no treatment assignment.  When observations are in treatment and control groups, estimates the additive treatment effect among the entire population (ATE), among the treated (ATT), and among the controls (ATC). If the outcome is binary, also the relative risk and odds ratio parameters.  P-values and 95\% confidence intervals are also calculated (on the log scale for RR and OR).
 }
 \usage{
 calcParameters(Y, A, I.Z, Delta, g1W, g0W, Q, mu1, mu0, id, family)
@@ -19,10 +19,10 @@ calcParameters(Y, A, I.Z, Delta, g1W, g0W, Q, mu1, mu0, id, family)
   \item{mu1}{targeted estimate of \eqn{E(Y|A=1,W)}}
   \item{mu0}{targeted estimate of \eqn{E(Y|A=0,W)}}
   \item{id}{subject identifier}
-  \item{family}{family specification for regressions, generally \sQuote{gaussian} for continuous oucomes, \sQuote{binomial} for binary outcomes}
+  \item{family}{family specification for regressions, generally \sQuote{gaussian} for continuous outcomes, \sQuote{binomial} for binary outcomes}
 }
 \value{
-  \item{EY1}{Population mean outcome estimate, variance, p-value, 95\% confidence interval (missingness only, no treatment assingment), or \code{NULL}}
+  \item{EY1}{Population mean outcome estimate, variance, p-value, 95\% confidence interval (missingness only, no treatment assignment), or \code{NULL}}
   \item{ATE}{additive treatment effect estimate, variance, p-value, 95\% confidence interval, or \code{NULL}}
   \item{RR}{relative risk estimate, p-value, 95\% confidence interval, log(RR), variance(log(RR)), or \code{NULL}}
   \item{OR}{odds ratio estimate, p-value, 95\% confidence interval, log(OR), variance(log(OR)), or \code{NULL}}

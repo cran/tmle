@@ -1,5 +1,5 @@
 \name{calcSigma}
-\Rdversion{1.2.0-5}
+\Rdversion{1.3.0}
 \alias{calcSigma}
 \title{Calculate Variance-Covariance Matrix for MSM Parameters (calcSigma)}
 \description{

@@ -1,5 +1,5 @@
 \name{tmle}
-\Rdversion{1.2.0-5}
+\Rdversion{1.3.0}
 \alias{tmle}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{Targeted Maximum Likelihood Estimation}
@@ -55,7 +55,7 @@ tmle(Y, A, W, Z=NULL, Delta = rep(1,length(Y)), Q = NULL, Q.Z1 = NULL, Qform = N
  This choice is simply because these algorithms are included in the base \code{R} installation. See \code{SuperLearner} help files for further information.
 }
 \value{
-  \item{estimates}{list with elements EY1 (population mean), ATE (additive treatment effect), RR (relative risk), OR (odds ratio). Each element in the estimates of these is itself a list containing 
+  \item{estimates}{list with elements EY1 (population mean), ATE (additive treatment effect), ATT (additive treatment effect among the treated), ATC (additive treatment effect among the controls), RR (relative risk), OR (odds ratio). Each element in the estimates of these is itself a list containing 
  \itemize{
   \item psi - parameter estimate 
   \item pvalue - two-sided p-value
@@ -82,6 +82,8 @@ tmle(Y, A, W, Z=NULL, Delta = rep(1,length(Y)), Q = NULL, Q.Z1 = NULL, Qform = N
 5. van der Laan, M.J. and Rubin, D. (2006), {Targeted Maximum Likelihood Learning}. \emph{The International Journal of Biostatistics}, 2(1). \url{http://www.bepress.com/ijb/vol2/iss1/11/}
 
 6. van der Laan, M.J., Rose, S., and Gruber,S., editors, (2009) {Readings in Targeted Maximum Likelihood Estimation} . \emph{U.C. Berkeley Division of Biostatistics Working Paper Series}.  Working Paper 254. \url{http://www.bepress.com/ucbbiostat/paper254}
+
+7. van der Laan, M.J. and Gruber S. (2016), {One-Step Targeted Minimum Loss-based Estimation Based on Universal Least Favorable One-Dimensional Submodels}. \emph{The International Journal of Biostatistics}, 12 (1), 351-378.
 }
 
 \author{Susan Gruber \email{sgruber@cal.berkeley.edu}, in collaboration with Mark van der Laan.}

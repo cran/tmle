@@ -144,6 +144,26 @@ print.summary.tmle <- function(x,...) {
 			cat("\n              p-value: ", ifelse(x$estimates$ATE$pvalue <= 2*10^-16, "<2e-16",signif(x$estimates$ATE$pvalue,5)))
 			cat("\n    95% Conf Interval:",paste("(", signif(x$estimates$ATE$CI[1],5), ", ", signif(x$estimates$ATE$CI[2],5), ")", sep=""),"\n") 
 		}
+		if(!is.null(x$estimates$ATT)){
+			cat("\n Additive Effect among the Treated")
+			if(!x$estimates$ATT$converged) {
+				cat("\n  Warning: Procedure failed to converge")
+			}
+			cat("\n   Parameter Estimate: ", signif(x$estimates$ATT$psi,5))
+			cat("\n   Estimated Variance: ", signif(x$estimates$ATT$var.psi,5))
+			cat("\n              p-value: ", ifelse(x$estimates$ATT$pvalue <= 2*10^-16, "<2e-16",signif(x$estimates$ATT$pvalue,5)))
+			cat("\n    95% Conf Interval:",paste("(", signif(x$estimates$ATT$CI[1],5), ", ", signif(x$estimates$ATT$CI[2],5), ")", sep=""),"\n") 
+		}
+		if(!is.null(x$estimates$ATC)){
+			if(!x$estimates$ATC$converged) {
+				cat("\n  Warning: Procedure failed to converge")
+			}
+			cat("\n Additive Effect among the Controls")
+			cat("\n   Parameter Estimate: ", signif(x$estimates$ATC$psi,5))
+			cat("\n   Estimated Variance: ", signif(x$estimates$ATC$var.psi,5))
+			cat("\n              p-value: ", ifelse(x$estimates$ATC$pvalue <= 2*10^-16, "<2e-16",signif(x$estimates$ATC$pvalue,5)))
+			cat("\n    95% Conf Interval:",paste("(", signif(x$estimates$ATC$CI[1],5), ", ", signif(x$estimates$ATC$CI[2],5), ")", sep=""),"\n") 
+		}
 		if(!is.null(x$estimates$RR)){
 			cat("\n Relative Risk")
 			cat("\n   Parameter Estimate: ", signif(x$estimates$RR$psi,5))
@@ -187,6 +207,26 @@ print.tmle <- function(x,...) {
 			cat("\n   Estimated Variance: ", signif(x$estimates$ATE$var.psi,5))
 			cat("\n              p-value: ", ifelse(x$estimates$ATE$pvalue <= 2*10^-16, "<2e-16",signif(x$estimates$ATE$pvalue,5)))
 			cat("\n    95% Conf Interval:",paste("(", signif(x$estimates$ATE$CI[1],5), ", ", signif(x$estimates$ATE$CI[2],5), ")", sep=""),"\n") 
+		}
+		if(!is.null(x$estimates$ATT)){
+			cat("\n Additive Effect among the Treated")
+			if(!x$estimates$ATT$converged) {
+				cat("\n  Warning: Procedure failed to converge")
+			}
+			cat("\n   Parameter Estimate: ", signif(x$estimates$ATT$psi,5))
+			cat("\n   Estimated Variance: ", signif(x$estimates$ATT$var.psi,5))
+			cat("\n              p-value: ", ifelse(x$estimates$ATT$pvalue <= 2*10^-16, "<2e-16",signif(x$estimates$ATT$pvalue,5)))
+			cat("\n    95% Conf Interval:",paste("(", signif(x$estimates$ATT$CI[1],5), ", ", signif(x$estimates$ATT$CI[2],5), ")", sep=""),"\n") 
+		}
+		if(!is.null(x$estimates$ATC)){
+			cat("\n Additive Effect among the Controls")
+			if(!x$estimates$ATC$converged) {
+				cat("\n  Warning: Procedure failed to converge")
+			}
+			cat("\n   Parameter Estimate: ", signif(x$estimates$ATC$psi,5))
+			cat("\n   Estimated Variance: ", signif(x$estimates$ATC$var.psi,5))
+			cat("\n              p-value: ", ifelse(x$estimates$ATC$pvalue <= 2*10^-16, "<2e-16",signif(x$estimates$ATC$pvalue,5)))
+			cat("\n    95% Conf Interval:",paste("(", signif(x$estimates$ATC$CI[1],5), ", ", signif(x$estimates$ATC$CI[2],5), ")", sep=""),"\n") 
 		}
 		if(!is.null(x$estimates$RR)){
 			cat("\n Relative Risk")
@@ -244,6 +284,49 @@ print.summary.tmle.list <- function(x,...) {
 	cat("\n           ----- Z = 1 -----\n")
 	print(x[[2]])
 }
+
+#-----------------------------------One-Step TMLE for ATT parameter  ----------------------------------------
+oneStepATT <- function(Y, A, Delta, Q, g1W, pDelta1, depsilon, max_iter, gbounds, Qbounds){
+n <- length(Y)
+q <- mean(A)
+deltaTerm <- Delta / pDelta1[cbind(1:nrow(pDelta1), A+1)]
+calcLoss <- function(Q, g1W){
+		-mean(deltaTerm*Y * log(Q[,"QAW"]) + deltaTerm*(1-Y) * log(1 - Q[,"QAW"]) + A * log(g1W) + (1-A) * log(1 - g1W))
+}
+psi.prev <- psi  <- mean((Q[,"Q1W"] - Q[, "Q0W"]) * g1W/q) 
+H1.AW =  (A -(1-A) * g1W / (1-g1W) * deltaTerm)
+IC.prev <- IC.cur <- H1.AW/q* (Y-Q[, "QAW"]) + A*(Q[,"Q1W"]-Q[,"Q0W"] - psi)/q 
+deriv <-  mean(H1.AW* (Y-Q[, "QAW"]) + A*(Q[,"Q1W"]-Q[,"Q0W"] - psi) )
+if (deriv > 0) { depsilon <- -depsilon}
+loss.prev <- Inf
+ 	loss.cur <-  calcLoss(Q, g1W)
+ 	if(is.nan(loss.cur) | is.na(loss.cur) | is.infinite(loss.cur)) { 
+ 		loss.cur <- Inf
+ 		loss.prev <- 0
+ 	}
+ 	iter <-  0
+ 	while (loss.prev > loss.cur & iter < max_iter){
+	IC.prev <-  IC.cur		
+	Q.prev <- Q
+	g1W.prev <- g1W	
+	g1W <- .bound(plogis(qlogis(g1W.prev) - depsilon  * (Q.prev[,"Q1W"] - Q.prev[,"Q0W"] - psi.prev)), gbounds) 
+ 		H1 <- cbind(HAW = deltaTerm * (A - (1-A) * g1W.prev / (1-g1W.prev)),
+				  H0W =   - g1W.prev/(1-g1W.prev) / pDelta1[,1],
+				  H1W =   1/pDelta1[,2]) 
+ 		Q  <- .bound(plogis(qlogis(Q.prev) - depsilon * H1), Qbounds)
+ 		psi.prev <- psi
+ 		psi <- mean((Q[,"Q1W"] - Q[, "Q0W"]) * g1W/q) 
+ 		loss.prev <- loss.cur
+ 		loss.cur <- calcLoss(Q, g1W)
+ 		IC.cur <- ((A - (1-A) * g1W / (1-g1W)) * deltaTerm * (Y-Q[, "QAW"]) + A *(Q[,"Q1W"]-Q[,"Q0W"] - psi))/q
+ 		if(is.nan(loss.cur) | is.infinite(loss.cur) | is.na(loss.cur)) {loss.cur <- Inf}
+ 		iter <- iter + 1
+ 		#print(psi.prev)
+ 	}
+ 	 	return(list(psi = psi.prev, IC = IC.prev, conv = loss.prev < loss.cur))
+ }
+
+
 
 # TMLE for Marginal Structural Models
 # Reference: Rosenblum&vanderLaan2010, Targeted Maxium Likelihood Estimation of the Parameter of a Marginal Structural Model, The International Journal of Biostatistics, volume 6, Issue 2, Article 19.
@@ -1103,13 +1186,13 @@ estimateG <- function (d,g1W, gform,SL.library, id, V, verbose, message, outcome
 # 	g1W - values of P(Delta=1|Z,A,W)*P(Z=z|A,W)*P(A=1|W)
 # 	g0W - values of P(Delta=1|Z,A,W)*P(Z=z|A,W)*P(A=0|W)
 #   Delta =- missingness indicator 
-#   Q - nx3 matrix(Q(A,W), Q(1,W), Q(0,W))
+#   Q - nx3 matrix(Q(A,W), Q(0,W), Q(1,W))
 #   mu1 - targeted estimate of EY1
 #   mu0 - targeted estimate of EY0
 #   id - subject id
 #   family - "gaussian" or "binomial" (or "poisson") 
 # returns:
-#   list: (EY1, ATE, RR, OR) 
+#   list: (EY1, ATE, ATT, ATC, RR, OR) 
 #	 EY1 - population mean outcome (NULL unless no variation in A)
 #	 ATE - additive effect: psi, CI, pvalue
 #	 RR - relative risk (NULL if family != binomial): psi, CI, pvalue, log.psi, var.log.psi
@@ -1120,7 +1203,7 @@ calcParameters <- function(Y,A, I.Z, Delta, g1W, g0W, Q, mu1, mu0, id, family){
 	n.id <- length(unique(id))
 	Y[is.na(Y)] <- 0
 	EY1 <- ATE <- RR <- OR <- NULL
-	IC.EY1 <- IC.ATE <- IC.logRR <- IC.logOR <- NULL
+	IC.EY1 <- IC.ATE  <- IC.logRR <- IC.logOR <- NULL
 	if(length(unique(A))==1){
 		pDelta1 <- A*g1W+ (1-A)*g0W   # one of these will be zero, the other pDelta1
 		IC.EY1 <- Delta/pDelta1*(Y-Q[,"QAW"]) + Q[,"Q1W"] - mu1
@@ -1139,8 +1222,7 @@ calcParameters <- function(Y,A, I.Z, Delta, g1W, g0W, Q, mu1, mu0, id, family){
 		ATE$psi <- mu1-mu0
 		ATE$var.psi <- var(IC.ATE)/n.id
 		ATE$CI <- ATE$psi + c(-1.96,1.96)*sqrt(ATE$var.psi)
-		ATE$pvalue <- 2*pnorm(-abs(ATE$psi/sqrt(ATE$var.psi)))
-
+		ATE$pvalue <- 2*pnorm(-abs(ATE$psi/sqrt(ATE$var.psi)))		
 		if(family=="binomial"){		
 			IC.logRR <- 1/mu1*(I.Z*(A/g1W)*Delta*(Y-Q[,"QAW"]) + Q[,"Q1W"] - mu1) - 
 					1/mu0*(I.Z*(1-A)/g0W*Delta*(Y-Q[,"QAW"])+ Q[,"Q0W"] - mu0)
@@ -1314,6 +1396,39 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
     	Q$Q <- Q$Q[,-1]
     	res <- calcParameters(Ystar, A, I.Z=rep(1, length(Ystar)), Delta, g1W.total, g0W.total, Qstar, 
    	   		  		mu1=mean(Qstar[,"Q1W"]), mu0=mean(Qstar[,"Q0W"]), id, family)
+   	   #ATT  & ATC - additive effect: psi, CI, pvalue 
+   	   if(length(unique(A)) > 1){
+        	depsilon <-  0.001
+        	Q.ATT <- (Qstar - stage1$ab[1])/diff(stage1$ab)
+        	res.ATT <- oneStepATT(Y = stage1$Ystar, A = A, Delta, Q = Q.ATT, g1W = g$g1W, pDelta1 = g.Delta$g1W[,c("Z0A0", "Z0A1")],
+        		depsilon = depsilon, max_iter = max(1000, 2/depsilon), gbounds = gbound, Qbounds = stage1$Qbound)
+			res.ATC <- oneStepATT(Y = stage1$Ystar, A = 1-A, Delta, Q = cbind(QAW = Q.ATT[,1], Q0W = Q.ATT[,"Q1W"], Q1W = Q.ATT[,"Q0W"]), 
+							g1W = 1-g$g1W, pDelta1 = g.Delta$g1W[,c("Z0A1", "Z0A0")],
+        				  depsilon = depsilon, max_iter = max(1000, 2/depsilon), gbounds = gbound, Qbounds = stage1$Qbound)
+        	ATT <- ATC <- NULL
+        	ATT$psi <- res.ATT$psi * diff(stage1$ab) 
+        	ATC$psi <- -res.ATC$psi * diff(stage1$ab) 
+        	ATT$converged <- res.ATT$conv
+        	 ATC$converged <- res.ATC$conv
+        	n.id <- length(unique(id))
+        	if(n.id < length(id)){
+        		IC.ATT <- as.vector(by(res.ATT$IC, id, mean)) * diff(stage1$ab) + stage1$ab[1]
+        		IC.ATC <- as.vector(by(res.ATC$IC, id, mean)) * diff(stage1$ab) + stage1$ab[1]
+        	} else {
+        		IC.ATT <- res.ATT$IC * diff(stage1$ab) + stage1$ab[1]
+        		IC.ATC <- res.ATC$IC * diff(stage1$ab) + stage1$ab[1]
+			}
+			ATT$var.psi <- var(IC.ATT)/n.id
+			ATC$var.psi <- var(IC.ATC)/n.id
+			ATT$CI <- ATT$psi + c(-1.96,1.96)*sqrt(ATT$var.psi)
+			ATC$CI <- ATC$psi + c(-1.96,1.96)*sqrt(ATC$var.psi)
+			ATT$pvalue <- 2*pnorm(-abs(ATT$psi/sqrt(ATT$var.psi)))	
+			ATC$pvalue <- 2*pnorm(-abs(ATC$psi/sqrt(ATC$var.psi)))	
+			res$ATT <- ATT
+			res$ATC <- ATC
+			res$IC$IC.ATT <- IC.ATT
+			res$IC$IC.ATC <- IC.ATC
+		}
   		returnVal <- list(estimates=res, Qinit=Q, g=g, g.Z=g.z, g.Delta=g.Delta, Qstar=Qstar[,-1], epsilon=epsilon) 
   		class(returnVal) <- "tmle"
   	} else {
