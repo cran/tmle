@@ -1,5 +1,5 @@
 \name{tmle}
-\Rdversion{1.3.0}
+\Rdversion{1.3.0-1}
 \alias{tmle}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{Targeted Maximum Likelihood Estimation}
@@ -94,6 +94,7 @@ tmle(Y, A, W, Z=NULL, Delta = rep(1,length(Y)), Q = NULL, Q.Z1 = NULL, Qform = N
 \code{\link{estimateQ}},
 \code{\link{estimateG}},
 \code{\link{calcParameters}},
+\code{\link{oneStepATT}},
 \code{\link{tmleMSM}},
 \code{\link{calcSigma}}
 }

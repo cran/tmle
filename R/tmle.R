@@ -289,6 +289,8 @@ print.summary.tmle.list <- function(x,...) {
 oneStepATT <- function(Y, A, Delta, Q, g1W, pDelta1, depsilon, max_iter, gbounds, Qbounds){
 n <- length(Y)
 q <- mean(A)
+pDelta1 <- .bound(pDelta1, c(1, min(gbounds)))
+g1W <- .bound(g1W, gbounds)
 deltaTerm <- Delta / pDelta1[cbind(1:nrow(pDelta1), A+1)]
 calcLoss <- function(Q, g1W){
 		-mean(deltaTerm*Y * log(Q[,"QAW"]) + deltaTerm*(1-Y) * log(1 - Q[,"QAW"]) + A * log(g1W) + (1-A) * log(1 - g1W))
@@ -1397,38 +1399,48 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
     	res <- calcParameters(Ystar, A, I.Z=rep(1, length(Ystar)), Delta, g1W.total, g0W.total, Qstar, 
    	   		  		mu1=mean(Qstar[,"Q1W"]), mu0=mean(Qstar[,"Q0W"]), id, family)
    	   #ATT  & ATC - additive effect: psi, CI, pvalue 
+   	   ATT <- ATC <- IC.ATT <- IC.ATE <- NULL
    	   if(length(unique(A)) > 1){
+   	   	     n.id <- length(unique(id))
         	depsilon <-  0.001
         	Q.ATT <- (Qstar - stage1$ab[1])/diff(stage1$ab)
-        	res.ATT <- oneStepATT(Y = stage1$Ystar, A = A, Delta, Q = Q.ATT, g1W = g$g1W, pDelta1 = g.Delta$g1W[,c("Z0A0", "Z0A1")],
-        		depsilon = depsilon, max_iter = max(1000, 2/depsilon), gbounds = gbound, Qbounds = stage1$Qbound)
-			res.ATC <- oneStepATT(Y = stage1$Ystar, A = 1-A, Delta, Q = cbind(QAW = Q.ATT[,1], Q0W = Q.ATT[,"Q1W"], Q1W = Q.ATT[,"Q0W"]), 
-							g1W = 1-g$g1W, pDelta1 = g.Delta$g1W[,c("Z0A1", "Z0A0")],
-        				  depsilon = depsilon, max_iter = max(1000, 2/depsilon), gbounds = gbound, Qbounds = stage1$Qbound)
-        	ATT <- ATC <- NULL
-        	ATT$psi <- res.ATT$psi * diff(stage1$ab) 
-        	ATC$psi <- -res.ATC$psi * diff(stage1$ab) 
-        	ATT$converged <- res.ATT$conv
-        	 ATC$converged <- res.ATC$conv
-        	n.id <- length(unique(id))
-        	if(n.id < length(id)){
-        		IC.ATT <- as.vector(by(res.ATT$IC, id, mean)) * diff(stage1$ab) + stage1$ab[1]
-        		IC.ATC <- as.vector(by(res.ATC$IC, id, mean)) * diff(stage1$ab) + stage1$ab[1]
-        	} else {
-        		IC.ATT <- res.ATT$IC * diff(stage1$ab) + stage1$ab[1]
-        		IC.ATC <- res.ATC$IC * diff(stage1$ab) + stage1$ab[1]
+        	res.ATT <- try(oneStepATT(Y = stage1$Ystar, A = A, Delta, Q = Q.ATT, g1W = g$g1W, 
+        						pDelta1 = g.Delta$g1W[,c("Z0A0", "Z0A1")],
+        						depsilon = depsilon, max_iter = max(1000, 2/depsilon), gbounds = gbound, Qbounds = stage1$Qbound))
+        	if(!(identical(class(res.ATT), "try-error"))){
+        	 		ATT$psi <- res.ATT$psi * diff(stage1$ab) 
+        	 		ATT$converged <- res.ATT$conv
+        	 		if(n.id < length(id)){
+        			IC.ATT <- as.vector(by(res.ATT$IC, id, mean)) * diff(stage1$ab) + stage1$ab[1]
+        		} else {
+        			IC.ATT <- res.ATT$IC * diff(stage1$ab) + stage1$ab[1]
+				}
+				ATT$var.psi <- var(IC.ATT)/n.id
+				ATT$CI <- ATT$psi + c(-1.96,1.96)*sqrt(ATT$var.psi)
+				ATT$pvalue <- 2*pnorm(-abs(ATT$psi/sqrt(ATT$var.psi)))	
 			}
-			ATT$var.psi <- var(IC.ATT)/n.id
-			ATC$var.psi <- var(IC.ATC)/n.id
-			ATT$CI <- ATT$psi + c(-1.96,1.96)*sqrt(ATT$var.psi)
-			ATC$CI <- ATC$psi + c(-1.96,1.96)*sqrt(ATC$var.psi)
-			ATT$pvalue <- 2*pnorm(-abs(ATT$psi/sqrt(ATT$var.psi)))	
-			ATC$pvalue <- 2*pnorm(-abs(ATC$psi/sqrt(ATC$var.psi)))	
+
+			res.ATC <- try(oneStepATT(Y = stage1$Ystar, A = 1-A, Delta, Q = cbind(QAW = Q.ATT[,1], Q0W = Q.ATT[,"Q1W"], Q1W = Q.ATT[,"Q0W"]), 
+							g1W = 1-g$g1W, pDelta1 = g.Delta$g1W[,c("Z0A1", "Z0A0")],
+        				  depsilon = depsilon, max_iter = max(1000, 2/depsilon), gbounds = gbound, Qbounds = stage1$Qbound))
+        				  
+        	if(!(identical(class(res.ATC), "try-error"))){
+        		ATC$psi <- -res.ATC$psi * diff(stage1$ab) 
+        		ATC$converged <- res.ATC$conv
+        		if(n.id < length(id)){
+        			IC.ATC <- as.vector(by(res.ATC$IC, id, mean)) * diff(stage1$ab) + stage1$ab[1]
+        		} else {
+        			IC.ATC <- res.ATC$IC * diff(stage1$ab) + stage1$ab[1]
+				}
+				ATC$var.psi <- var(IC.ATC)/n.id
+				ATC$CI <- ATC$psi + c(-1.96,1.96)*sqrt(ATC$var.psi)
+				ATC$pvalue <- 2*pnorm(-abs(ATC$psi/sqrt(ATC$var.psi)))	
+			}
 			res$ATT <- ATT
 			res$ATC <- ATC
 			res$IC$IC.ATT <- IC.ATT
 			res$IC$IC.ATC <- IC.ATC
-		}
+	}
   		returnVal <- list(estimates=res, Qinit=Q, g=g, g.Z=g.z, g.Delta=g.Delta, Qstar=Qstar[,-1], epsilon=epsilon) 
   		class(returnVal) <- "tmle"
   	} else {

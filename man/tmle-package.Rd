@@ -1,5 +1,5 @@
 \name{tmle-package}
-\Rdversion{1.3.0}
+\Rdversion{1.3.0-1}
 \alias{tmle-package}
 \docType{package}
 \title{Targeted Maximum Likelihood Estimation with Super Learning}
