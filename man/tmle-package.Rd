@@ -1,5 +1,5 @@
 \name{tmle-package}
-\Rdversion{1.3.0-1}
+\Rdversion{1.3.0-2}
 \alias{tmle-package}
 \docType{package}
 \title{Targeted Maximum Likelihood Estimation with Super Learning}
@@ -9,8 +9,8 @@ Targeted maximum likelihood estimation of marginal treatment effect of a binary 
 \tabular{ll}{
 Package: \tab tmle\cr
 Type: \tab Package\cr
-Version: \tab 1.3.0\cr
-Date: \tab 2018-01-31\cr
+Version: \tab 1.3.2\cr
+Date: \tab 2019-02-20\cr
 License: \tab BSD | GPL-2 \cr
 } 
 }

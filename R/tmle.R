@@ -672,7 +672,7 @@ tmleMSM <- function(Y,A,W,V,T=rep(1,length(Y)), Delta=rep(1, length(Y)), MSM, v=
     	if(family=="binomial"){
     		mAV <- plogis(cbind(covar.MSMA0 %*% psi.Qstar, covar.MSMA1 %*% psi.Qstar))
     	} else {
-    		mAV <- matrix(1, nrow=nrow(covar.MSMA0), ncol=2)
+    		mAV <- cbind(covar.MSMA0 %*% psi.Qstar, covar.MSMA1 %*% psi.Qstar)
     	}
     	colnames(mAV) <- c("m0V", "m1V")
     	sigma <- calcSigma(hAV, gAVW, Y, Qstar, mAV, covar.MSM, covar.MSMA0, covar.MSMA1, I.V, Delta, ub, id, family)/n.id
@@ -1214,7 +1214,7 @@ calcParameters <- function(Y,A, I.Z, Delta, g1W, g0W, Q, mu1, mu0, id, family){
 		}
 		EY1$psi <- mu1
 		EY1$var.psi <- var(IC.EY1)/n.id
-		EY1$CI <- EY1$psi + c(-1.96,1.96)*sqrt(EY1$var.psi)
+		EY1$CI <- c(EY1$psi -1.96*sqrt(EY1$var.psi), EY1$psi +1.96*sqrt(EY1$var.psi))
 		EY1$pvalue <- 2*pnorm(-abs(EY1$psi/sqrt(EY1$var.psi)))
 	} else {
 		IC.ATE<- I.Z*(A/g1W - (1-A)/g0W)*Delta*(Y-Q[,"QAW"]) + Q[,"Q1W"] - Q[,"Q0W"] - (mu1-mu0)
@@ -1223,7 +1223,7 @@ calcParameters <- function(Y,A, I.Z, Delta, g1W, g0W, Q, mu1, mu0, id, family){
 		}
 		ATE$psi <- mu1-mu0
 		ATE$var.psi <- var(IC.ATE)/n.id
-		ATE$CI <- ATE$psi + c(-1.96,1.96)*sqrt(ATE$var.psi)
+		ATE$CI <- c(ATE$psi -1.96 *sqrt(ATE$var.psi), ATE$psi +1.96 *sqrt(ATE$var.psi))
 		ATE$pvalue <- 2*pnorm(-abs(ATE$psi/sqrt(ATE$var.psi)))		
 		if(family=="binomial"){		
 			IC.logRR <- 1/mu1*(I.Z*(A/g1W)*Delta*(Y-Q[,"QAW"]) + Q[,"Q1W"] - mu1) - 
@@ -1233,7 +1233,7 @@ calcParameters <- function(Y,A, I.Z, Delta, g1W, g0W, Q, mu1, mu0, id, family){
 			}
 			var.psi.logRR <- var(IC.logRR)/n.id
 			RR$psi <- mu1/mu0
-			RR$CI  <- exp(log(RR$psi) + c(-1.96,1.96)*sqrt(var.psi.logRR))
+			RR$CI  <- c(exp(log(RR$psi) -1.96 *sqrt(var.psi.logRR)), exp(log(RR$psi) +1.96 *sqrt(var.psi.logRR)))
 			RR$pvalue <- 2*pnorm(-abs(log(RR$psi)/sqrt(var.psi.logRR)))
 			RR$log.psi <- log(RR$psi)
 			RR$var.log.psi <- var.psi.logRR
@@ -1245,7 +1245,7 @@ calcParameters <- function(Y,A, I.Z, Delta, g1W, g0W, Q, mu1, mu0, id, family){
 			}
 			var.psi.logOR <- var(IC.logOR)/n.id
 			OR$psi <-  mu1/(1-mu1)/(mu0 / (1-mu0))
-			OR$CI  <- exp(log(OR$psi) + c(-1.96,1.96)*sqrt(var.psi.logOR))
+			OR$CI  <- c(exp(log(OR$psi) -1.96 *sqrt(var.psi.logOR)), exp(log(OR$psi) +1.96 *sqrt(var.psi.logOR)))
 			OR$pvalue <- 2*pnorm(-abs(log(OR$psi)/sqrt(var.psi.logOR)))
 			OR$log.psi <- log(OR$psi)
 			OR$var.log.psi <- var.psi.logOR
@@ -1296,6 +1296,9 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
 				alpha  = 0.995, id=1:length(Y), V = 5, verbose=FALSE) {
 	# Initializations
 	psi.tmle <- varIC <- CI <- pvalue <- NA
+	if (is.vector(W)) {
+		W <- as.matrix(W)
+	}
 	# W <- as.matrix(W)  # if W is a dataframe with factors, changing to matrix will blow it
 	colnames(W) <- .setColnames(colnames(W), NCOL(W), "W")
 	if (identical(family, binomial)) {
@@ -1416,7 +1419,7 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
         			IC.ATT <- res.ATT$IC * diff(stage1$ab) + stage1$ab[1]
 				}
 				ATT$var.psi <- var(IC.ATT)/n.id
-				ATT$CI <- ATT$psi + c(-1.96,1.96)*sqrt(ATT$var.psi)
+				ATT$CI <- c(ATT$psi -1.96 *sqrt(ATT$var.psi), ATT$psi +1.96 *sqrt(ATT$var.psi))
 				ATT$pvalue <- 2*pnorm(-abs(ATT$psi/sqrt(ATT$var.psi)))	
 			}
 
@@ -1433,7 +1436,7 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
         			IC.ATC <- res.ATC$IC * diff(stage1$ab) + stage1$ab[1]
 				}
 				ATC$var.psi <- var(IC.ATC)/n.id
-				ATC$CI <- ATC$psi + c(-1.96,1.96)*sqrt(ATC$var.psi)
+				ATC$CI <- c(ATC$psi -1.96 *sqrt(ATC$var.psi), ATC$psi +1.96 *sqrt(ATC$var.psi))
 				ATC$pvalue <- 2*pnorm(-abs(ATC$psi/sqrt(ATC$var.psi)))	
 			}
 			res$ATT <- ATT
