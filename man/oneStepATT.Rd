@@ -1,5 +1,5 @@
 \name{oneStepATT}
-\Rdversion{1.3.0-2}
+\Rdversion{1.4.0}
 \alias{oneStepATT}
 \title{Calculate Additive treatment effect among the treated (oneStepATT)}
 \description{

@@ -1,5 +1,5 @@
 \name{tmleMSM}
-\Rdversion{1.3.0-2}
+\Rdversion{1.4.0}
 \alias{tmleMSM}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
@@ -9,12 +9,13 @@ Targeted maximum likelihood estimation of the parameter of a marginal structural
 \usage{
 tmleMSM(Y, A, W, V, T = rep(1,length(Y)), Delta = rep(1, length(Y)), MSM, 
         v = NULL, Q = NULL, Qform = NULL, Qbounds = c(-Inf, Inf), 
-        Q.SL.library = c("SL.glm", "SL.step", "SL.glm.interaction"), 
-        cvQinit = FALSE, hAV = NULL, hAVform = NULL, g1W = NULL, 
+        Q.SL.library = c("SL.glm", "tmle.SL.dbarts2", "SL.glmnet"), 
+        cvQinit = TRUE, hAV = NULL, hAVform = NULL, g1W = NULL, 
         gform = NULL, pDelta1 = NULL, g.Deltaform = NULL, 
-	g.SL.library = c("SL.glm", "SL.step", "SL.glm.interaction"),
+	g.SL.library = c("SL.glm", "tmle.SL.dbarts.k.5", "SL.gam"),
 	ub = 1/0.025, family = "gaussian", fluctuation = "logistic", 
-        alpha  = 0.995, id = 1:length(Y), V_SL = 5, inference = TRUE, verbose = FALSE) 
+        alpha  = 0.995, id = 1:length(Y), V_SL = 5, inference = TRUE, 
+        verbose = FALSE, Q.discreteSL = FALSE, g.discreteSL = FALSE) 
 }
 \arguments{
   \item{Y}{continuous or binary outcome variable}
@@ -29,7 +30,7 @@ tmleMSM(Y, A, W, V, T = rep(1,length(Y)), Delta = rep(1, length(Y)), MSM,
   \item{Qform}{optional regression formula for estimation of \eqn{E(Y|A, W)}, suitable for call to \code{glm}}
   \item{Qbounds}{vector of upper and lower bounds on \code{Y} and predicted values for initial \code{Q}}
   \item{Q.SL.library}{optional vector of prediction algorithms to use for \code{SuperLearner} estimation of initial \code{Q} }
-  \item{cvQinit}{logical, if \code{TRUE}, estimates cross-validated predicted values using discrete super learning, default=\code{FALSE}}
+  \item{cvQinit}{logical, if \code{TRUE}, estimates cross-validated predicted values using discrete super learning, default=\code{TRUE}}
   \item{hAV}{optional \eqn{nx2} matrix used in numerator of weights for updating covariate and the influence curve. If unspecified, defaults to conditional probabilities \eqn{P(A=1|V)} or \eqn{P(A=1|T)}, for repeated measures data. For unstabilized weights, pass in an \eqn{nx2} matrix of all 1s}
   \item{hAVform}{optionalregression formula of the form \code{A~V+T}, if specified this overrides the call to \code{SuperLearner}} 
   \item{g1W}{optional vector of conditional treatment assingment probabilities, \eqn{P(A=1|W)}}
@@ -45,15 +46,11 @@ tmleMSM(Y, A, W, V, T = rep(1,length(Y)), Delta = rep(1, length(Y)), MSM,
   \item{V_SL}{number of cross-validation folds for Super Learner estimation of Q and g}
   \item{inference}{if \code{TRUE}, variance-covariance matrix, standard errors, pvalues, and 95\% confidence intervals are calculated. Setting to FALSE saves a little time when bootstrapping.}
   \item{verbose}{status messages printed if set to \code{TRUE} (default=\code{FALSE})}
+  \item{Q.discreteSL}{If true, use discrete SL to estimate Q, otherwise ensembleSL by default. Ignored when SL is not used.}
+  \item{g.discreteSL}{If true, use discrete SL to estimate components of g, otherwise ensembleSL by default. Ignored when SL is not used.}
 }
 \details{
  \code{ub} bounds the IC by bounding the factor \eqn{h(A,V)/[g(A,V,W)P(Delta=1|A,V,W)]} between 0 and \code{ub}, default value = 1/0.025.
-
- \code{Q.SL.library} Defaults to (\sQuote{SL.glm}, \sQuote{SL.step}, \sQuote{SL.glm.interaction})
-
- \code{g.SL.library} Defaults to (\sQuote{SL.glm}, \sQuote{SL.step}, \sQuote{SL.glm.interaction})
-
- This choice is simply because these algorithms are included in the base \code{R} installation. See \code{SuperLearner} help files for further information.
 }
 \value{
   \item{psi}{MSM parameter estimate} 
@@ -102,14 +99,14 @@ library(tmle)
   result.ex1 <- tmleMSM(Y, A, W, V, MSM = "A*V", Qform = Y~., gform = A~1, 
                         hAVform = A~1, family = "binomial")
   print(result.ex1)
-
+\dontrun{
 # Example 2. Repeated measures data, two observations per id
 # (e.g., crossover study design)
 # MSM: psi0 + psi1*A + psi2*V + psi3*V^2 + psi4*T
 # true parameter value: psi = (-2, 1, 0, -2, 0 )
 # generate data in wide format (id,  W1, Y(t),  W2(t), V(t), A(t)) 
-   set.seed(100)
-   n <- 500
+   set.seed(10)
+   n <- 250
    id <- rep(1:n)
    W1   <- rbinom(n, 1, 0.5)
    W2.1 <- rnorm(n)
@@ -130,16 +127,20 @@ library(tmle)
           timevar = "T",
           new.row.names = NULL,
           sep = "")
-# misspecified model for initial Q, partial misspecification for g
+# misspecified model for initial Q, partial misspecification for g. 
+# V_SL set to 2 to save time, not recommended at this sample size
    result.ex2 <- tmleMSM(Y = longd$Y, A = longd$A, W = longd[,c("W1", "W2")], V = longd$V, 
-          T = longd$T, MSM = "A + V + I(V^2) + T", Qform = Y ~ A + V, gform = A ~ W2, id = longd$id)
+          T = longd$T, MSM = "A + V + I(V^2) + T", Qform = Y ~ A + V, gform = A ~ W2, 
+	id = longd$id, V_SL=2)
    print(result.ex2)
 
 
 # Example 3:  Introduce 20% missingness in example 2 data
+# V_SL set to 2 to save time, not recommended at this sample size
   Delta <- rbinom(nrow(longd), 1, 0.8)
   result.ex3 <- tmleMSM(Y = longd$Y, A = longd$A, W = longd[,c("W1", "W2")], V = longd$V, T=longd$T,
           Delta = Delta, MSM = "A + V + I(V^2) + T", Qform = Y ~ A + V, gform = A ~ W2,
-	  g.Deltaform = Delta~ 1, id=longd$id, verbose = TRUE)
+	  g.Deltaform = Delta~ 1, id=longd$id, verbose = TRUE, V_SL=2)
   print(result.ex3)
+}
 }

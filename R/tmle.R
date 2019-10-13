@@ -71,9 +71,10 @@ summary.tmle <- function(object,...) {
 		}}
 		summary.tmle <- list(estimates=object$estimates,
 						Qmodel=Qmodel, Qterms=Qterms, Qcoef=Qcoef, Qtype=object$Qinit$type,
-						gbd=gbd, gmodel=gmodel, gterms=gterms, gcoef=gcoef,gtype=object$g$type, 
-						g.Zmodel=g.Zmodel, g.Zterms=g.Zterms, g.Zcoef=g.Zcoef, g.Ztype=object$g.Z$type,
-						g.Deltamodel=g.Deltamodel, g.Deltaterms=g.Deltaterms, g.Deltacoef=g.Deltacoef, g.Deltatype=object$g.Delta$type )
+						gbd=gbd, gmodel=gmodel, gterms=gterms, gcoef=gcoef,gtype=object$g$type, gdiscreteSL= object$g$discreteSL,
+						g.Zmodel=g.Zmodel, g.Zterms=g.Zterms, g.Zcoef=g.Zcoef, g.Ztype=object$g.Z$type, g.ZdiscreteSL= object$g.Z$discreteSL,
+						g.Deltamodel=g.Deltamodel, g.Deltaterms=g.Deltaterms, g.Deltacoef=g.Deltacoef, g.Deltatype=object$g.Delta$type,
+						g.DeltadiscreteSL=object$g.Delta$discreteSL)
 		class(summary.tmle) <- "summary.tmle"
 	} else {
 		stop("object must have class 'tmle'")
@@ -99,7 +100,16 @@ print.summary.tmle <- function(x,...) {
   		}
   	}
   	cat("\n Estimation of g (treatment mechanism)\n")
-  	cat("\t Procedure:", x$gtype,"\n")
+  	cat("\t Procedure:", x$gtype)
+  	if(!(is.null(x$gdiscreteSL))) {
+  		 if (x$gdiscreteSL) { 
+  		 	cat(", discrete")
+  		 } else {
+  		 	cat(", ensemble")
+  		 }
+  	}
+  	cat("\n")
+  		
   	if(!(is.na(x$gcoef[1]))){	
  		cat("\t Model:\n\t\t", x$gmodel, "\n")
   		cat("\n\t Coefficients: \n")
@@ -285,6 +295,48 @@ print.summary.tmle.list <- function(x,...) {
 	print(x[[2]])
 }
 
+#----------------------------------- dbarts wrapper and predict function for SL  ----------------------------------------
+# written by Chris Kennedy
+# ------------------
+
+tmle.SL.dbarts2 <-  function(Y, X, newX, family, obsWeights, id, sigest = NA, sigdf = 3, sigquant = 0.90,
+                     k = 2, power = 2.0, base = 0.95, binaryOffset = 0.0, ntree = 200, ndpost = 1000,  nskip = 100, 
+                     printevery = 100,  keepevery = 1,  keeptrainfits = TRUE,   usequants = FALSE,
+                     numcut = 100, printcutoffs = 0,  nthread = 1,   keepcall = TRUE,   verbose = FALSE, ...) {
+  
+ # 	SuperLearner:::.SL.require("dbarts")
+  	model = dbarts::bart(x.train = X,  y.train = Y,   x.test = newX, sigest = sigest,  sigdf = sigdf, sigquant = sigquant,
+                 k = k,  power = power, base = base,  binaryOffset = binaryOffset,   weights = obsWeights,  ntree = ntree,
+                 ndpost = ndpost,   nskip = nskip,   printevery = printevery,  keepevery = keepevery,  keeptrainfits = keeptrainfits,
+                 usequants = usequants,   numcut = numcut,   printcutoffs = printcutoffs,  nthread = nthread, keepcall = keepcall,
+                 keeptrees = TRUE,  verbose = verbose)
+ 
+ 	 if (family$family == "gaussian") {
+    	pred = model$yhat.test.mean
+ 	 }  
+  	if (family$family == "binomial") {
+    	pred = colMeans(stats::pnorm(model$yhat.test))
+  	}
+ 	 fit = list(object = model)
+  	class(fit) = c("tmle.SL.dbarts2")
+  	out = list(pred = pred, fit = fit)
+  	return(out)
+}
+
+predict.tmle.SL.dbarts2 <- function(object, newdata, family, ...) {
+ # SuperLearner:::.SL.require("dbarts")
+  pred = predict(object$object, test = newdata) 
+   if (family$family == "gaussian") {
+    	pred = colMeans(pred) 
+ 	 }  
+  	if (family$family == "binomial") {
+    	pred = colMeans(stats::pnorm(pred))
+  	}
+ 
+  return(pred)
+}
+#-------------------------------------------------------------
+
 #-----------------------------------One-Step TMLE for ATT parameter  ----------------------------------------
 oneStepATT <- function(Y, A, Delta, Q, g1W, pDelta1, depsilon, max_iter, gbounds, Qbounds){
 n <- length(Y)
@@ -467,7 +519,7 @@ print.summary.tmleMSM <- function(x,...) {
   		for(i in 1:length(x$g.Deltacoef)){
   			cat("\t", terms[i], extra[i], x$g.Deltacoef[i], "\n")
   	}}
-  	cat("\n Bounds on g: (", x$gbd,")\n")
+  	cat("\n Bounds on weights incorporating g: (", x$gbd,")\n")
 	if(!is.null(x$estimates)){
 		cat("\n MSM parameter estimates and 95% confidence intervals\n")
 		print(x$estimates,quote=FALSE, na.print="<2e-16")
@@ -557,13 +609,13 @@ calcSigma <- function(hAV, gAVW, Y, Q, mAV, covar.MSM, covar.MSMA0, covar.MSMA1,
 
 tmleMSM <- function(Y,A,W,V,T=rep(1,length(Y)), Delta=rep(1, length(Y)), MSM, v=NULL, 
 				Q=NULL, Qform=NULL, 
-				Qbounds=c(-Inf, Inf), Q.SL.library=c("SL.glm", "SL.step", "SL.glm.interaction"), cvQinit = FALSE,
+				Qbounds=c(-Inf, Inf), Q.SL.library=c("SL.glm", "tmle.SL.dbarts2", "SL.glmnet"), cvQinit = TRUE,
 				hAV=NULL, hAVform=NULL,  
 				g1W = NULL, gform=NULL, 
 				pDelta1=NULL, g.Deltaform=NULL, 
-				g.SL.library=c("SL.glm", "SL.step", "SL.glm.interaction"), ub = 1/0.025, 
+				g.SL.library=c("SL.glm", "tmle.SL.dbarts.k.5", "SL.gam"), ub = 1/0.025, 
 				family="gaussian", fluctuation="logistic", alpha  = 0.995,
-				id=1:length(Y), V_SL=5, inference=TRUE, verbose=FALSE) {
+				id=1:length(Y), V_SL=5, inference=TRUE, verbose=FALSE, Q.discreteSL = FALSE, g.discreteSL = FALSE) {
 	Y[is.na(Y)] <- 0
 	n <- length(Y)
 	n.id <- length(unique(id))
@@ -597,12 +649,12 @@ tmleMSM <- function(Y,A,W,V,T=rep(1,length(Y)), Delta=rep(1, length(Y)), MSM, v=
 	Qinit <- suppressWarnings(estimateQ(Y=stage1$Ystar,Z=rep(1, length(Y)), A=A, 
 			W=cbind(W,V,T), Delta=(I.V==1 & Delta==1),
 			Q=stage1$Q, Qbounds=stage1$Qbounds, Qform=Qform, maptoYstar = maptoYstar,
-			SL.library=Q.SL.library, cvQinit=cvQinit, family=family, id=id, V = V_SL, verbose=verbose))
+			SL.library=Q.SL.library, cvQinit=cvQinit, family=family, id=id, V = V_SL, verbose=verbose, discreteSL=Q.discreteSL))
 
 #---- Stage 2 -----
     if(is.null(hAV)){
     	gAV <- suppressWarnings(estimateG(d=data.frame(A,V,T), hAV, hAVform,g.SL.library, id, V=V_SL, verbose, 
-    			message="h(A,V)", outcome="A"))
+    			message="h(A,V)", outcome="A",  discreteSL= g.discreteSL))
 		hAV <- cbind((1-A)*(1-gAV$g1W) + A*gAV$g1W, 1-gAV$g1W, gAV$g1W)
 	} else {
 		hAV <- cbind((1-A)*(hAV[,1]) + A*hAV[,2], hAV)
@@ -614,17 +666,17 @@ tmleMSM <- function(Y,A,W,V,T=rep(1,length(Y)), Delta=rep(1, length(Y)), MSM, v=
 	colnames(hAV) <- c("hAV", "h0V", "h1V")
 	if (is.null(v)){
 		g <- suppressWarnings(estimateG(d=data.frame(A,V,W,T), g1W, gform,g.SL.library, id, V=V_SL, verbose, 
-    			message="treatment mechanism", outcome="A"))
+    			message="treatment mechanism", outcome="A",  discreteSL=g.discreteSL))
 	} else {	
 		g <- suppressWarnings(estimateG(d=data.frame(A,V,W,T), g1W, gform,g.SL.library, id, V=V_SL, verbose, 
-    			message="treatment mechanism", outcome="A", newdata=data.frame(A,V=v, W,T)))
+    			message="treatment mechanism", outcome="A", newdata=data.frame(A,V=v, W,T),  discreteSL=g.discreteSL))
    }
    g$bound <- c(0,ub)
    if(g$type=="try-error"){
  		stop("Error estimating treatment mechanism (hint: only numeric variables are allowed)") 
  	}
  	g.Delta <- estimateG(d=data.frame(Delta, Z=1, A, W,V,T), pDelta1, g.Deltaform, 
- 		g.SL.library,id=id, V = V_SL, verbose, "missingness mechanism", outcome="D") 
+ 		g.SL.library,id=id, V = V_SL, verbose, "missingness mechanism", outcome="D",  discreteSL=g.discreteSL) 
 	g1VW <- g$g1W * g.Delta$g1W[,"Z0A1"]
 	g0VW <- (1-g$g1W) * g.Delta$g1W[,"Z0A0"]
 	gAVW <- A*g1VW + (1-A)*g0VW
@@ -727,24 +779,42 @@ tmleMSM <- function(Y,A,W,V,T=rep(1,length(Y)), Delta=rep(1, length(Y)), MSM, v=
 	return(all(ok))
 }
 
-#---------.sg.glm.interaction --------
-# Old versions of SL don't have SL.glm.interaction defined.  
-# This will define it.
+# #---------.sg.glm.interaction --------
+# # Old versions of SL don't have SL.glm.interaction defined.  
+# # This will define it.
 
-.sg.glm.interaction <- function (Y.temp, X.temp, newX.temp, family, obsWeights, ...) 
+# .sg.glm.interaction <- function (Y.temp, X.temp, newX.temp, family, obsWeights, ...) 
+# {
+    # fit.glm <- glm(Y.temp ~ .^2, data = X.temp, family = family, 
+        # weights = obsWeights)
+    # out <- predict(fit.glm, newdata = newX.temp, type = "response")
+    # fit <- list(object = fit.glm)
+    # class(fit) <- "SL.glm"
+    # foo <- list(out = out, fit = fit)
+    # return(foo)
+# }
+
+# if(!(exists("SL.glm.interaction"))){
+	# SL.glm.interaction <- .sg.glm.interaction
+# }
+
+# -------------tmle.SL.dbarts.k.5------------------
+# Use dbarts to estimate g with k = 0.5 instead of the default of k=2.
+# This may undersmooth / overfit, but k=2 shrinks g too far from (0,1).
+ tmle.SL.dbarts.k.5 <- function (Y, X, newX, family, obsWeights, id, sigest = NA, sigdf = 3, 
+    sigquant = 0.9, k = 0.5, power = 2, base = 0.95, binaryOffset = 0, 
+    ntree = 200, ndpost = 1000, nskip = 100, printevery = 100, 
+    keepevery = 1, keeptrainfits = TRUE, usequants = FALSE, numcut = 100, 
+    printcutoffs = 0, nthread = 1, keepcall = TRUE, verbose = FALSE, 
+    ...) 
 {
-    fit.glm <- glm(Y.temp ~ .^2, data = X.temp, family = family, 
-        weights = obsWeights)
-    out <- predict(fit.glm, newdata = newX.temp, type = "response")
-    fit <- list(object = fit.glm)
-    class(fit) <- "SL.glm"
-    foo <- list(out = out, fit = fit)
-    return(foo)
+	    #require(SuperLearner)
+		tmle.SL.dbarts2 (Y, X, newX, family, obsWeights, id, sigest = sigest, sigdf = sigdf, sigquant=sigquant,
+			k = k, power = power, base = base, binaryOffset = binaryOffset, ntree=ntree, ndpost = ndpost, nskip = nskip,
+			printevery = printevery, keepevery = keepevery, keeptrainfits = keeptrainfits, usequants = usequants, numcut = numcut,
+			printcutoffs = printcutoffs, nthread = nthread, keepcall = keepcall, verbose = verbose)
 }
 
-if(!(exists("SL.glm.interaction"))){
-	SL.glm.interaction <- .sg.glm.interaction
-}
 #---------- function .setColnames ---------------
 # assign names to every unnamed column of x
 # arguments
@@ -785,7 +855,7 @@ if(!(exists("SL.glm.interaction"))){
 # returns
 #   Ystar - outcome values (between [0,1] if maptoYstar=TRUE)
 #   Q - matrix of user-specified values
-#   Qbounds - bounds on predicted values for Q (10% wider at each end then
+#   Qbounds - bounds on predicted values for Q (1% wider at each end then
 # 			observed range of Y
 #			(-Inf,+Inf) is default for linear regression
 #   ab - bounding levels used to transform Y to Ystar
@@ -795,7 +865,7 @@ if(!(exists("SL.glm.interaction"))){
  	if(is.null(Qbounds)) {
  		if(maptoYstar){ 
  			Qbounds <- range(Y[Delta==1])
- 			Qbounds <- Qbounds + .1*c(-abs(Qbounds[1]),abs(Qbounds[2]))
+ 			Qbounds <- Qbounds + .01*c(-abs(Qbounds[1]),abs(Qbounds[2]))
  		} else {
  			Qbounds <- c(-Inf, Inf)
  		}
@@ -829,91 +899,6 @@ if(!(exists("SL.glm.interaction"))){
 } 
 
 
-#----- function .estQcvSL ----
-# purpose: Obtain cross-validated estimates for initial Q using discrete SL.  
-# 	This function will return cross-validated predicted initial values 
-#   corresponding to the best algorithm in the library, or the convex combination
-#   calculated by SL itself, as chosen by cvRSS.
-#   The fitted value for each observation i, is predicted from a fit based on a training set
-#	excluding the fold containing observation i. Observations with same id are grouped in the
-#   same fold.
-# arguments: 
-# 	Y - outcome
-# 	X - design matrix with (Z,A,W)
-# 	SL.library - prediction algorithms
-# 	V - number of outer cv-folds for disscrete SL
-# 	V_SL - number of folds for internal SL cross-validation
-# 	family - binomial or gaussian
-#   Delta - missingness indicator
-#   Qbounds - bounds on predicted values for Q
-#   id - subject identifier
-# returns:
-#  Q - nx5 matrix of predicted values on linear scale (e.g. logit if Qfamily=binomial)
-#-----------------------------------------------
-.estQcvSL <- function(Y,X,SL.library=NULL, V=5, V_SL=5, family="gaussian", Delta, Qbounds, id, verbose){
-	SL.version <- 2
-	Q <- cvRSS <- best_alg <- NULL
-	n <- length(Y)
-	u.id <- unique(id)
-	n.id <- length(u.id)
-	fold <- by(sample(1:n.id),rep(1:V, length.out=n.id),function(x){which(id %in% u.id[x])})
-	n_predictors <-length(SL.library)
-	CDE <- length(unique(X[,1])) > 1
-
-	if(NCOL(X) > 1){
-		newX <- rbind(X,X,X,X,X)
-		newX[(n+1):(3*n),1]   <- 0 
-		newX[(3*n+1):(5*n),1] <- 1
-		newX[(n+1):(2*n),2]   <- 0
-		newX[(2*n+1):(3*n),2] <- 1
-		newX[(3*n+1):(4*n),2] <- 0
-		newX[(4*n+1):(5*n),2] <- 1
-		# We'll create a matrix of predictions - one column for each predictor in the library
-		# plus one more for SL itself, with 5*n predicted values per column, corresponding to newX.
-   		predictions <- matrix(nrow=5*n, ncol=length(SL.library)+1)
-   		m_SL <- NULL
-    	for (v in 1:V) {
-    		fold_rows <- c(fold[[v]], fold[[v]]+n, fold[[v]]+2*n, fold[[v]]+3*n, fold[[v]]+4*n)
-    		if(class(m_SL) != "try-error"){
-    			train.observed <- (1:n)[-fold[[v]]][Delta[-fold[[v]]]==1]
-    			if(packageDescription("SuperLearner")$Version < SL.version){
-    				arglist <- list(Y=Y[train.observed], X=X[train.observed,], newX=newX[fold_rows,],
-    			 	V=V_SL, save.fit.library=FALSE, family=family,SL.library=SL.library,id=id[train.observed])
-    			} else {
-    				arglist <- list(Y=Y[train.observed], X=X[train.observed,], newX=newX[fold_rows,],
-    			 	cvControl=list(V=V_SL), control = list(saveFitLibrary=FALSE), family=family,SL.library=SL.library,id=id[train.observed])
-    			}
-
-    			suppressWarnings(
-    				m_SL <- try(do.call(SuperLearner, arglist))
-    			 )
-    		}
-    		if(class(m_SL) != "try-error"){
-    			predictions[fold_rows,1] <- m_SL$SL.predict
-    			for (s in 1:n_predictors){
-    				predictions[fold_rows,s+1] <- m_SL$library.predict[,s]
-    			}
-    			predictions <- .bound(predictions, Qbounds)
-    		} else {
-    			stop("Super Learner failed when estimating Q. Exiting program\n")
-    		}
-    	} 
-    	cvRSS <- colSums(Delta*(Y-predictions[1:n,])^2)
-    	names(cvRSS) <- c("SL", SL.library)
-    	best <- which.min(cvRSS)
-    	best_alg <- c("SL", SL.library)[best]
-    	Q <- matrix(data=predictions[,best], nrow=n, ncol=5, byrow=FALSE)
-    	colnames(Q) <- c("QAW", "Q0W", "Q1W", "Q0W.Z1", "Q1W.Z1")
-    } 	
-	if(verbose){cat("\tDiscrete SL: best algorithm = ", best_alg,"\n")}
-	if (is.null(Q) | class(m_SL) == "try-error"){
-		Q <- 0
-		class(Q) <- "try-error"
-	}
-	Qinit <- list(Q=Q, family=family, SL.library=SL.library, cvRSS=cvRSS, best_alg=best_alg)
-    return(Qinit)
- }
-
 #-----------estimateQ----------------
 # purpose: estimate Q=E(Y |Z, A,W) data-adaptively,
 # unless super learner not available, or user specifies 
@@ -932,7 +917,8 @@ if(!(exists("SL.glm.interaction"))){
 # 		estimation inital Q on linear scale, bounded by (0,1),and return on logit scale
 #		(will work if family=poisson)
 #	SL.library - library of prediction algorithms for Super Learner
-#   cvQinit - flag, if TRUE, cross-validate SL.
+#   cvQinit - flag, if TRUE, cross-validate predictions
+# discreteSL - if TRUE, use predictions from best learner, otherwise ensemble SL predictions
 # 	family - regression family
 #	id - subject identifier
 # V - number of cross-validation folds
@@ -943,7 +929,32 @@ if(!(exists("SL.glm.interaction"))){
 # 		type, estimation method for Q
 #----------------------------------------
 estimateQ <- function (Y,Z,A,W, Delta, Q, Qbounds, Qform, maptoYstar, 
-		SL.library, cvQinit, family, id, V, verbose) {
+		SL.library, cvQinit,  family, id, V, verbose, discreteSL) {
+	.expandLib <- function(SL.lib){
+		if (is.list(SL.lib)){
+			counts <- sapply(SL.lib, length)
+			numExtra <-  sum(counts > 2)
+			m <- matrix("", nrow = length(SL.lib) + numExtra, ncol = 2)
+			rowIndex <- 1
+			for (i in 1:length(counts)){
+				if(counts[i] ==1 ){
+					m[rowIndex, ] <- c(SL.lib[[i]], "All")
+				} else{
+					m[rowIndex, ] <- SL.lib[[i]][1:2]
+				}
+				rowIndex <- rowIndex+1
+				if (counts[i] > 2){
+					for (j in 3:counts[i]){
+						m[rowIndex,] <- SL.lib[[i]][c(1,  j)]
+						rowIndex <- rowIndex+1
+					}
+				}
+			}
+			return(split(m, 1:nrow(m)))
+		} else {
+			return(SL.lib)
+		}
+	}
 	SL.version <- 2
 	Qfamily <- family
 	m <- NULL
@@ -954,6 +965,12 @@ estimateQ <- function (Y,Z,A,W, Delta, Q, Qbounds, Qform, maptoYstar,
 		if(verbose) { cat("\tEstimating initial regression of Y on A and W\n")}
 		Q <- matrix(NA, nrow=length(Y), ncol = 5)
   	  	colnames(Q)<- c("QAW", "Q0W", "Q1W", "Q0W.Z1", "Q1W.Z1")
+  	  	if (cvQinit){
+  	  			folds <- vector(mode = "list", length = V)
+  	  			uid <- unique(id)
+  	  			n.id <- length(uid)
+  	  			id.split <- split(sample(1:n.id), rep(1:V, length = n.id))		
+  	  	}
   	  	if(!(is.null(Qform))){
   	  		if(identical(as.character(as.formula(Qform)), c("~","Y", "."))){
   	  			if(CDE){
@@ -962,61 +979,110 @@ estimateQ <- function (Y,Z,A,W, Delta, Q, Qbounds, Qform, maptoYstar,
   	   	  			Qform <- paste("Y~A+", paste(colnames(W), collapse="+"))
 				}
   	  		}
-  	  		m <- suppressWarnings(glm(Qform, data=data.frame(Y,Z,A,W, Delta), family=family, subset=Delta==1))
-  	  		Q[,"QAW"] <- predict(m, newdata=data.frame(Y,Z,A,W), type="response")
-  	  		Q[,"Q0W"] <- predict(m, newdata=data.frame(Y,Z=0,A=0,W), type="response")
-  	  		Q[,"Q1W"] <- predict(m, newdata=data.frame(Y,Z=0,A=1,W), type="response")
-  	  		Q[,"Q0W.Z1"] <- predict(m, newdata=data.frame(Y,Z=1,A=0,W), type="response")
-  	  		Q[,"Q1W.Z1"] <- predict(m, newdata=data.frame(Y,Z=1,A=1,W), type="response")
-  	  		coef <- coef(m)
-  	  		type="glm, user-supplied model"	
-  	  	} else {
-  	  		if(cvQinit){
-  	  			m <- try(.estQcvSL(Y,X=cbind(Z,A,W),SL.library, family=family, 
-  	  					Delta=Delta, Qbounds=Qbounds,id=id, V_SL = V, verbose=verbose))
-  	  			if(!(identical(class(m), "try-error"))){
-  	  				type <- "cross-validated SL"
-  	  				Qinit <- m
-  	  				Q <- Qinit$Q
-  	  			}
+  	  		if (cvQinit){
+                for (v in 1:V) {
+                    folds[[v]] <- which(id %in% uid[id.split[[v]]])
+  	  				TRAIN <- rep(TRUE, length(Y))
+  	  				TRAIN[folds[[v]]] <- FALSE
+	  	  			m <- suppressWarnings(glm(Qform, data=data.frame(Y,Z,A,W, Delta, TRAIN), family=family, subset=(Delta==1 & TRAIN)))
+		  	  		Q[folds[[v]],"QAW"] <- predict(m, newdata=data.frame(Y,Z,A,W)[folds[[v]],], type="response")
+		  	  		Q[folds[[v]],"Q0W"] <- predict(m, newdata=data.frame(Y,Z=0,A=0,W)[folds[[v]],], type="response")
+		  	  		Q[folds[[v]],"Q1W"] <- predict(m, newdata=data.frame(Y,Z=0,A=1,W)[folds[[v]],], type="response")
+		  	  		Q[folds[[v]],"Q0W.Z1"] <- predict(m, newdata=data.frame(Y,Z=1,A=0,W)[folds[[v]],], type="response")
+		  	  		Q[folds[[v]],"Q1W.Z1"] <- predict(m, newdata=data.frame(Y,Z=1,A=1,W)[folds[[v]],], type="response")
+	  	  		#coef <- coef(m)
+	  	  		}
+	  	  		type="cv-glm, user-supplied model"
   	  		} else {
-  				if(verbose) {cat("\t using SuperLearner\n")}
+	  	  		m <- suppressWarnings(glm(Qform, data=data.frame(Y,Z,A,W, Delta), family=family, subset=Delta==1))
+	  	  		Q[,"QAW"] <- predict(m, newdata=data.frame(Y,Z,A,W), type="response")
+	  	  		Q[,"Q0W"] <- predict(m, newdata=data.frame(Y,Z=0,A=0,W), type="response")
+	  	  		Q[,"Q1W"] <- predict(m, newdata=data.frame(Y,Z=0,A=1,W), type="response")
+	  	  		Q[,"Q0W.Z1"] <- predict(m, newdata=data.frame(Y,Z=1,A=0,W), type="response")
+	  	  		Q[,"Q1W.Z1"] <- predict(m, newdata=data.frame(Y,Z=1,A=1,W), type="response")
+	  	  		coef <- coef(m)
+	  	  		type="glm, user-supplied model"	
+  	  		}
+  	  	    	Qinit <- list(Q=Q, family=Qfamily, coef=coef, type=type)
+  	  	} else {
+  			if(verbose) {cat("\t using SuperLearner\n")}
+  				#require(SuperLearner)
   				n <- length(Y)
   				X <- data.frame(Z,A,W)
   				X00 <- data.frame(Z=0,A=0, W)
   				X01 <- data.frame(Z=0,A=1, W)
   				newX <- rbind(X, X00, X01)
+  				newX.id <- rep(id, 3)
   				if(CDE) {
   					X10 <- data.frame(Z=1,A=0, W)
   					X11 <- data.frame(Z=1,A=1, W)
   					newX <- rbind(newX, X10, X11)
+  					newX.id <- rep(id, 5)
   				}
-  				if(packageDescription("SuperLearner")$Version < SL.version){
+  				if (packageDescription("SuperLearner")$Version < SL.version){
     				arglist <- list(Y=Y[Delta==1],X=X[Delta==1,], newX=newX, SL.library=SL.library,
   							V=V, family=family, save.fit.library=FALSE, id=id[Delta==1])
   				} else {
     				arglist <- list(Y=Y[Delta==1],X=X[Delta==1,], newX=newX, SL.library=SL.library,
     			 		cvControl=list(V=V), family=family, control = list(saveFitLibrary=FALSE), id=id[Delta==1])
-    				}
-    				suppressWarnings(
-    					m<- try(do.call(SuperLearner, arglist))
-    			 	)	
-  				if(identical(class(m),"SuperLearner")){
-  					Q[,"QAW"] <- m$SL.predict[1:n]
-  					Q[,"Q0W"] <- m$SL.predict[(n+1):(2*n)]
-  					Q[,"Q1W"] <- m$SL.predict[(2*n+1):(3*n)]
-  					if(CDE){
-  						Q[,"Q0W.Z1"] <- m$SL.predict[(3*n+1):(4*n)]
-  				  		Q[,"Q1W.Z1"] <- m$SL.predict[(4*n+1):(5*n)]
+    			}
+    			suppressWarnings(m<- try(do.call(SuperLearner, arglist)))	
+  				if(identical(class(m),"SuperLearner")){  
+  					coef <- m$coef
+  					if (discreteSL){
+  						keepAlg <- which.min(m$cvRisk)
+  						SL.coef <- 1
+  						type <- paste("SuperLearner, discrete, selected",  paste(.expandLib(SL.library)[[keepAlg]], collapse = ", "))
+  					} else {
+  						keepAlg <- which(m$coef > 0)
+  						SL.coef <- m$coef[m$coef > 0]
+  						type <- "SuperLearner, ensemble"
   					}
-  					type <- "SuperLearner"
+  					if (cvQinit) {
+  						type <- paste0("cv-", type)
+  						# run the chosen learners on each training set, and get predictions for each fold. 
+  						# Have to figure out how to unpack the library to get the correct combination of screeners and algorithms	
+						SL.library.keep <- .expandLib(SL.library)[keepAlg]
+						predictions <- rep(NA, nrow(newX))
+  					   for (v in 1:V) {
+                     		folds[[v]] <- which(id %in% uid[id.split[[v]]])
+  	  				 		TRAIN <- rep(TRUE, length(Y))
+  	  				 		TRAIN[folds[[v]]] <- FALSE
+  	  				 		if (packageDescription("SuperLearner")$Version < SL.version){
+    								arglist <- list(Y=Y[TRAIN & Delta==1],X=X[TRAIN & Delta==1,], newX=newX[!TRAIN,], 
+    								SL.library=SL.library.keep,V=V, family=family, save.fit.library=FALSE, id=id[TRAIN & Delta==1])
+  							} else {
+    								arglist <- list(Y=Y[TRAIN & Delta==1],X=X[TRAIN & Delta==1,], newX=newX[!TRAIN,], 
+    								SL.library=SL.library.keep, cvControl=list(V=V), family=family, control = list(saveFitLibrary=FALSE),
+    								 id=id[TRAIN & Delta==1])
+    						}
+    						suppressWarnings(m<- try(do.call(SuperLearner, arglist)))
+    						if(discreteSL){
+    							keepAlg <- which.min(m$cvRisk)
+  								SL.coef <- 1
+    							predictions[!TRAIN] <- m$library.predict[,keepAlg]
+    						} else {
+    							predictions[!TRAIN] <- as.vector(as.matrix(m$library.predict) %*% SL.coef)
+    						}
+  	  				   }
+  					} else {
+  						    if(discreteSL){
+    							keepAlg <- which.min(m$cvRisk)
+  								SL.coef <- 1
+    							predictions[!TRAIN] <- m$library.predict[,keepAlg]
+    						} else {
+  								predictions <- as.vector(as.matrix(m$library.predict[,keepAlg]) %*% SL.coef)
+  							}
+  					}
+  					Q <- matrix(predictions, nrow = n, byrow = FALSE)
+  					colnames(Q) <- c("QAW", "Q0W", "Q1W", "Q0W.Z1", "Q1W.Z1")[1:ncol(Q)]
   	  			} else {
   	  				stop("Super Learner failed when estimating Q. Exiting program\n")
   	  			} 
-  	   } }
-  	} 
-  	if(is.na(Q[1,1]) | identical(class(m), "try-error")){
-  	  		if(verbose) {cat("\t Running main terms regression for 'Q' using glm\n")}
+  	   } 
+  	}
+  	if(is.na(Q[1]) | identical(class(m), "try-error")){
+  	  		if(verbose) {cat("\t Warning: \nRunning main terms regression for 'Q' using glm\n")}
   	  		Qform <- paste("Y~Z+A+", paste(colnames(W), collapse="+"))
   	  		m <- glm(Qform, data=data.frame(Y,Z,A,W, Delta), family=family, subset=Delta==1)
   	  		Q[,"QAW"] <- predict(m, newdata=data.frame(Y,Z,A,W), type="response")
@@ -1024,10 +1090,10 @@ estimateQ <- function (Y,Z,A,W, Delta, Q, Qbounds, Qform, maptoYstar,
   	  		Q[,"Q0W"] <- predict(m, newdata=data.frame(Y,Z=0,A=0,W), type="response")
 	  		Q[,"Q0W.Z1"] <- predict(m, newdata=data.frame(Y,Z=1,A=0,W), type="response")
   	  		Q[,"Q1W.Z1"] <- predict(m, newdata=data.frame(Y,Z=1,A=1,W), type="response")
-
   	  		coef <- coef(m)
   	  		type="glm, main terms model"
   	 }
+  	if(!CDE){Q <- Q[,1:3]}
 	Q <- .bound(Q, Qbounds)
 	if(maptoYstar | identical(Qfamily,"binomial") | identical(Qfamily, binomial)){
 			Q <- qlogis(Q)
@@ -1036,19 +1102,37 @@ estimateQ <- function (Y,Z,A,W, Delta, Q, Qbounds, Qform, maptoYstar,
 			Q <- log(Q)
 			Qfamily <- "poisson"
 	}
-	if(!CDE){
-		Q <- Q[,1:3]
-	}
-	if(cvQinit){
-		Qinit$Q <- Q
-	} else {
-		Qinit <- list(Q=Q, family=Qfamily, coef=coef, type=type)
-		if(type=="SuperLearner"){
-			 Qinit$SL.library=SL.library
-			 Qinit$coef=m$coef
-		}
-	}
+	Qinit <- list(Q=Q, family=Qfamily, coef=coef, type=type, SL.library = SL.library)
 	return(Qinit)
+}
+
+#---------------.prescreenW.g----------------------
+# Screen covariates for association with residual after 
+# initial regression to use in estimating g
+# selects lasso covariates with non-zero coefficients
+# using initial fit as offset, so it's a function of association with residuals
+# 	Y - outcome on same scale as Q
+#  W - eligible covariates for screening
+#  Delta - indicator the outcome is observed
+#  QAW - initial estimate of QAW on appropriate scale for offset
+# family = "binomial", "gaussian", or "poisson", set by estimateQ
+# min.retain = minimum number of of variables to retain
+#------------------------------------------------------
+.prescreenW.g <- function(Y, A, W, Delta, QAW, family, min.retain){  
+    if(NCOL(W) < min.retain){
+    	min.retain <- NCOL(W)
+    }
+    m.lasso <- cv.glmnet(W[Delta == 1,], Y[Delta == 1], family =  family, offset = QAW[Delta == 1])
+	beta <- coef(m.lasso, s = m.lasso$lambda.min)[-1] # ignore the intercept
+	retain <- which(abs(beta) > 0)
+	if (length(retain) < min.retain ){
+		if (length(unique(A)) == 1){
+			retain <-  unique( c(retain, order(abs(cor(Delta, W)))[1:min.retain]))[1:min.retain]
+		} else {
+			retain <- unique( c(retain, order(abs(cor(A, W)))[1:min.retain]))[1:min.retain]
+		}
+	} 
+	return(retain)
 }
 
 #-----------estimateG----------------
@@ -1069,7 +1153,7 @@ estimateQ <- function (Y,Z,A,W, Delta, Q, Qbounds, Qform, maptoYstar,
 # d = [Z,A,W] for intermediate
 # d = [Delta, Z,A,W for missingness]
 #----------------------------------------
-estimateG <- function (d,g1W, gform,SL.library, id, V, verbose, message, outcome="A", newdata=d)  {
+estimateG <- function (d,g1W, gform,SL.library, id, V, verbose, message, outcome="A", newdata=d, discreteSL)  {
   SL.version <- 2
   SL.ok <- FALSE
   m <- NULL
@@ -1098,7 +1182,12 @@ estimateG <- function (d,g1W, gform,SL.library, id, V, verbose, message, outcome
   			m <- try(do.call(SuperLearner,arglist))
   		)
   		if(identical(class(m),"SuperLearner")) {
-  			g1W <- as.vector(m$SL.predict)
+  			if(discreteSL){ 
+    				keepAlg <- which.min(m$cvRisk)
+  					g1W <- m$library.predict[,keepAlg]
+    		} else {
+  				g1W <- as.vector(m$SL.predict)
+  			}
   		} else {
   			SL.ok <- FALSE
   			cat("Error estimating g using SuperLearner. Defaulting to glm\n")
@@ -1131,11 +1220,18 @@ estimateG <- function (d,g1W, gform,SL.library, id, V, verbose, message, outcome
   	  }
   	  # Get counterfactual predicted values
   	  if(outcome=="Z"){
-  	  	if(identical(class(m),"SuperLearner")){
-  	  		g1W <- cbind(predict(m, newdata=data.frame(A=0, newdata[,-(1:2), drop=FALSE]), type="response", 
+  	  	if(identical(class(m),"SuperLearner")){ 
+  	  		if (discreteSL){
+  	  			g1W <- cbind(predict(m, newdata=data.frame(A=0, newdata[,-(1:2), drop=FALSE]), type="response", 
+  	  								X=d[,-1, drop=FALSE], Y=d[,1])[[2]][,keepAlg], 
+  	  				      predict(m, newdata=data.frame(A=1, newdata[,-(1:2), drop=FALSE]), type="response", 
+  	  				   				X=d[,-1, drop=FALSE], Y=newdata[,1])[[2]][,keepAlg])
+  	  		} else {
+  	  			g1W <- cbind(predict(m, newdata=data.frame(A=0, newdata[,-(1:2), drop=FALSE]), type="response", 
   	  								X=d[,-1, drop=FALSE], Y=d[,1])[[1]], 
   	  				      predict(m, newdata=data.frame(A=1, newdata[,-(1:2), drop=FALSE]), type="response", 
   	  				   				X=d[,-1, drop=FALSE], Y=newdata[,1])[[1]])
+  	  		}
   	  	} else {
   	  		g1W <- cbind(predict(m, newdata=data.frame(A=0, newdata[,-(1:2), drop=FALSE]), type="response"), 
   	  				   predict(m, newdata=data.frame(A=1, newdata[,-(1:2), drop=FALSE]), type="response"))
@@ -1143,8 +1239,18 @@ estimateG <- function (d,g1W, gform,SL.library, id, V, verbose, message, outcome
   	  	colnames(g1W) <- c("A0", "A1")
 		
   	  } else if (outcome=="D"){
-  	  	if(identical(class(m),"SuperLearner")){
-  	  		g1W <- cbind(predict(m, newdata=data.frame(Z=0, A=0, newdata[,-(1:3), drop=FALSE]), type="response", 
+  	  	if(identical(class(m),"SuperLearner")){  
+  	  		if (discreteSL){
+  	  			g1W <- cbind(predict(m, newdata=data.frame(Z=0, A=0, newdata[,-(1:3), drop=FALSE]), type="response", 
+  	  							X=d[,-1,drop=FALSE], Y=d[,1])[[2]][,keepAlg], 
+  	  			 		  predict(m, newdata=data.frame(Z=0, A=1, newdata[,-(1:3), drop=FALSE]), type="response", 
+  	  			 				X=d[,-1, drop=FALSE], Y=d[,1])[[2]][,keepAlg],
+  	  		  	 		  predict(m, newdata=data.frame(Z=1, A=0, newdata[,-(1:3), drop=FALSE]), type="response", 
+  	  		  	 				X=d[,-1, drop=FALSE], Y=d[,1])[[2]][,keepAlg],	     	     		  
+  	  		  	 			predict(m, newdata=data.frame(Z=1, A=1, newdata[,-(1:3), drop=FALSE]), type="response", 
+  	  		  	 				X=d[,-1, drop=FALSE], Y=d[,1])[[2]][,keepAlg])
+  	  		} else {  		
+  	  			g1W <- cbind(predict(m, newdata=data.frame(Z=0, A=0, newdata[,-(1:3), drop=FALSE]), type="response", 
   	  							X=d[,-1,drop=FALSE], Y=d[,1])[[1]], 
   	  			 		  predict(m, newdata=data.frame(Z=0, A=1, newdata[,-(1:3), drop=FALSE]), type="response", 
   	  			 				X=d[,-1, drop=FALSE], Y=d[,1])[[1]],
@@ -1152,6 +1258,7 @@ estimateG <- function (d,g1W, gform,SL.library, id, V, verbose, message, outcome
   	  		  	 				X=d[,-1, drop=FALSE], Y=d[,1])[[1]],	     	     		  
   	  		  	 			predict(m, newdata=data.frame(Z=1, A=1, newdata[,-(1:3), drop=FALSE]), type="response", 
   	  		  	 				X=d[,-1, drop=FALSE], Y=d[,1])[[1]])
+  	  		 }
   	   } else{
   	   	 	g1W <- cbind(predict(m, newdata=data.frame(Z=0, A=0, newdata[,-(1:3), drop=FALSE]), type="response"), 
   	  			 		  predict(m, newdata=data.frame(Z=0, A=1, newdata[,-(1:3), drop=FALSE]), type="response"),
@@ -1169,10 +1276,11 @@ estimateG <- function (d,g1W, gform,SL.library, id, V, verbose, message, outcome
   		}
   	}
   	if(is.null(type)){ type <- class(m)[1]}
-  	returnVal <- list(g1W=g1W, coef=coef, type=type)
+  	returnVal <- list(g1W=g1W, coef=coef, type=type, discreteSL = discreteSL)
   	if(type=="SuperLearner"){
 			 returnVal$SL.library=SL.library
 			 returnVal$coef=m$coef
+			 returnVal$discreteSL = discreteSL
 		}
  return(returnVal)
 }
@@ -1284,16 +1392,21 @@ calcParameters <- function(Y,A, I.Z, Delta, g1W, g0W, Q, mu1, mu0, id, family){
 # id - optional subject identifier
 # V - number of cross-validation folds for SL estimation of Q and g
 # verbose - flag for controlling printing of messages
+# Q.discreteSL - flag to use discreteSL instead of ensemble SL, ignored when g or gform supplied
+# g.discreteSL - flag to use discreteSL instead of ensemble SL, ignored when g or gform supplied
+# target.gwt - if TRUE, g is in the weight instead of in the clever covariate
 #-------------------------------------------------------------------------------
 tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),  
 				Q=NULL, Q.Z1=NULL, Qform=NULL, Qbounds=NULL, 
-				Q.SL.library=c("SL.glm", "SL.step", "SL.glm.interaction"), cvQinit=FALSE,
+				Q.SL.library=c("SL.glm", "tmle.SL.dbarts2", "SL.glmnet"), cvQinit= TRUE,
 				g1W=NULL, gform=NULL, gbound=0.025, 
 				pZ1=NULL, g.Zform=NULL,
 				pDelta1=NULL, g.Deltaform=NULL, 
-				g.SL.library=c("SL.glm", "SL.step", "SL.glm.interaction"),
+				g.SL.library=c("SL.glm", "tmle.SL.dbarts.k.5", "SL.gam"),
 				family="gaussian", fluctuation="logistic", 
-				alpha  = 0.995, id=1:length(Y), V = 5, verbose=FALSE) {
+				alpha  = 0.9995, id=1:length(Y), V = 5, verbose=FALSE, Q.discreteSL=FALSE, 
+				g.discreteSL = FALSE, prescreenW.g = TRUE, min.retain = 2, target.gwt =TRUE,
+				automate = FALSE) {
 	# Initializations
 	psi.tmle <- varIC <- CI <- pvalue <- NA
 	if (is.vector(W)) {
@@ -1311,8 +1424,35 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
         	Qform <- paste("Y~A", paste(colnames(W), collapse="+"), sep="+")
         }
     }
+    n <- length(Y)
 	if(is.null(A) | all(A==0)){
-		A <- rep(1, length(Y))
+		A <- rep(1, n)
+	}
+	# Set up default values for "automate" mode
+	if (automate){
+		Qform <- gform <- g.Zform <- g.Deltaform <- NULL
+		Q.SL.library <- g.SL.library <- c("SL.glm", "tmle.SL.dbarts2", "SL.glmnet")
+		cvQinit <- TRUE
+		alpha <- .9995
+		Q.discreteSL <- g.discreteSL <- FALSE
+		prescreenW.g <- TRUE
+		target.gwt <- TRUE
+		if (n <= 100) {
+			V <- 20
+			gbound <- .1
+		} else if (n <= 500) {
+			V <- 10
+			gbound <- .05
+		} else if (n <= 1000) {
+			V <- 5
+			gbound <- .025
+		} else if (n  < 10000){
+			V <- 3
+			gbound <- .025
+		} else {
+			V <- 2
+			gbound <- .01
+		}
 	}
 	
 	if(!.verifyArgs(Y,Z,A,W,Delta, Qform, gform, g.Zform, g.Deltaform)){
@@ -1353,7 +1493,7 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
  	stage1 <- .initStage1(Y, A, Q, Q.Z1, Delta, Qbounds, alpha, maptoYstar, family)		
 	Q <- suppressWarnings(estimateQ(Y=stage1$Ystar,Z,A,W, Delta, Q=stage1$Q, Qbounds=stage1$Qbounds, Qform, 
 					maptoYstar=maptoYstar, SL.library=Q.SL.library, 
-					cvQinit=cvQinit, family=family, id=id, V = V, verbose=verbose))
+					cvQinit=cvQinit, family=family, id=id, V = V, verbose=verbose, discreteSL=Q.discreteSL))
 					
 	# Stage 2
 	if(length(gbound)==1){
@@ -1363,7 +1503,28 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
 			gbound <- c(gbound, 1-gbound)
 		}
 	}
- 	g <- suppressWarnings(estimateG(d=data.frame(A,W), g1W, gform, g.SL.library, id=id, V = V, verbose, "treatment mechanism", outcome="A")) 
+	# # if prescreenW.g, keep all the variables in the gform, and keep a minimum of 2 variables.
+	# pre-screening won't work for factors.
+	if(is.data.frame(W)){
+			W.factors <-  any(lapply(W, class) == "factor")
+	} else {
+			W.factors <- any(apply(W, 2, class) == "factor")
+	}
+	prescreenW.g <- prescreenW.g & is.null(gform)  # don't prescreen if variables are already in a specified regression model
+	if (W.factors & verbose & prescreenW.g){
+		print("Warning. Because some variables in W are factors,  covariates will not be pre-screened before estimating G.") 
+	}
+	if((NCOL(W) < min.retain) | W.factors | !prescreenW.g ) {
+		retain.W <- 1:NCOL(W)
+	} else {
+		if ((identical(family, gaussian) | identical(family, "gaussian")) & Q$family == "binomial") {
+				Q.offset <-  plogis(Q$Q[,"QAW"])
+		} else {
+				Q.offset <- Q$Q[,"QAW"]
+		}		 
+		retain.W <- .prescreenW.g(stage1$Ystar, A, as.matrix(W), Delta , QAW = Q.offset,  family = family, min.retain)
+	}
+ 	g <- suppressWarnings(estimateG(d=data.frame(A,W[,retain.W]), g1W, gform, g.SL.library, id=id, V = V, verbose, "treatment mechanism", outcome="A",  discreteSL = g.discreteSL)) 
  	g$bound <- gbound
  	if(g$type=="try-error"){
  		stop("Error estimating treatment mechanism (hint: only numeric variables are allowed)") 
@@ -1373,20 +1534,33 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
   		g.z <- NULL
   		g.z$type="No intermediate variable"
   		g.z$coef=NA
-  		g.Delta <- suppressWarnings(estimateG(d=data.frame(Delta, Z=1, A, W), pDelta1, g.Deltaform, 
- 	 		g.SL.library,id=id, V = V, verbose = verbose, "missingness mechanism", outcome="D")) 
+  		# if prescreenW.g, keep all the variables in the g.Deltaform, or keep a minimum of 2 variables. Always keep A.
+  		g.Delta <- suppressWarnings(estimateG(d=data.frame(Delta, Z=1, A, W[,retain.W]), pDelta1, g.Deltaform, 
+ 	 		g.SL.library,id=id, V = V, verbose = verbose, "missingness mechanism", outcome="D",  discreteSL= g.discreteSL)) 
  		g1W.total <- .bound(g$g1W*g.Delta$g1W[,"Z0A1"], gbound)
   		g0W.total <- .bound((1-g$g1W)*g.Delta$g1W[,"Z0A0"], gbound)  
   		if(all(g1W.total==0)){g1W.total <- rep(10^-9, length(g1W.total))}
   		if(all(g0W.total==0)){g0W.total <- rep(10^-9, length(g0W.total))}
-  		H1W <- A/g1W.total
-  		H0W <- (1-A)/g0W.total
+  		
+  		if(target.gwt){
+  			wt <- A/g1W.total + (1-A)/g0W.total
+  			H1W <- A
+  			H0W <- 1-A
+  		} else{
+  			wt <- rep(1, length(A))
+  			H1W <- A/g1W.total
+  			H0W <- (1-A)/g0W.total
+  		}
 
   		suppressWarnings(
-  			epsilon <- coef(glm(stage1$Ystar~-1 + offset(Q$Q[,"QAW"]) + H0W + H1W, family=Q$family, subset=Delta==1))
+  			epsilon <- coef(glm(stage1$Ystar~-1 + offset(Q$Q[,"QAW"]) + H0W + H1W, family=Q$family, weights = wt, subset=Delta==1))
   		)
   		epsilon[is.na(epsilon)] <- 0  # needed for EY1 calculation
- 		Qstar <- Q$Q + c((epsilon[1]*H0W + epsilon[2]*H1W), epsilon[1]/g0W.total, epsilon[2]/g1W.total)
+  		if (target.gwt){
+  			Qstar <- Q$Q + c((epsilon[1]*H0W + epsilon[2]*H1W), rep(epsilon[1], length(Y)), rep(epsilon[2], length(Y)))
+  		} else {
+ 			Qstar <- Q$Q + c((epsilon[1]*H0W + epsilon[2]*H1W), epsilon[1]/g0W.total, epsilon[2]/g1W.total)
+ 		}
 		colnames(Qstar) <- c("QAW", "Q0W", "Q1W")
        Ystar <- stage1$Ystar
    		if (maptoYstar) {
@@ -1398,7 +1572,7 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
     		Qstar <- exp(Qstar)
     	}
     	colnames(Q$Q) <- c("QAW", "Q0W", "Q1W")
-    	Q$Q <- Q$Q[,-1]
+    	#Q$Q <- Q$Q[,-1]
     	res <- calcParameters(Ystar, A, I.Z=rep(1, length(Ystar)), Delta, g1W.total, g0W.total, Qstar, 
    	   		  		mu1=mean(Qstar[,"Q1W"]), mu0=mean(Qstar[,"Q0W"]), id, family)
    	   #ATT  & ATC - additive effect: psi, CI, pvalue 
@@ -1406,7 +1580,8 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
    	   if(length(unique(A)) > 1){
    	   	     n.id <- length(unique(id))
         	depsilon <-  0.001
-        	Q.ATT <- (Qstar - stage1$ab[1])/diff(stage1$ab)
+        	# browser()
+        	Q.ATT <- (Q$Q- stage1$ab[1])/diff(stage1$ab)  # changed to should be Q$Q
         	res.ATT <- try(oneStepATT(Y = stage1$Ystar, A = A, Delta, Q = Q.ATT, g1W = g$g1W, 
         						pDelta1 = g.Delta$g1W[,c("Z0A0", "Z0A1")],
         						depsilon = depsilon, max_iter = max(1000, 2/depsilon), gbounds = gbound, Qbounds = stage1$Qbound))
@@ -1444,14 +1619,15 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
 			res$IC$IC.ATT <- IC.ATT
 			res$IC$IC.ATC <- IC.ATC
 	}
-  		returnVal <- list(estimates=res, Qinit=Q, g=g, g.Z=g.z, g.Delta=g.Delta, Qstar=Qstar[,-1], epsilon=epsilon) 
+		Q$Q <- Q$Q[,-1]
+  		returnVal <- list(estimates=res, Qinit=Q, g=g, g.Z=g.z, g.Delta=g.Delta, Qstar=Qstar[,-1], epsilon=epsilon, gbound = gbound, W.retained = colnames(W)[retain.W]) 
   		class(returnVal) <- "tmle"
   	} else {
   		returnVal <- vector(mode="list", length=2)
-  		g.z <- suppressWarnings(estimateG(d=data.frame(Z,A,W), pZ1, g.Zform, g.SL.library, id=id, V = V, 
-  					  verbose, "intermediate variable", outcome="Z"))
-  		g.Delta <- suppressWarnings(estimateG(d=data.frame(Delta,Z, A, W), pDelta1, g.Deltaform, 
-  								 g.SL.library,id=id, V=V, verbose, "missingness mechanism", outcome="D")) 
+  		g.z <- suppressWarnings(estimateG(d=data.frame(Z,A,W[,retain.W]), pZ1, g.Zform, g.SL.library, id=id, V = V, 
+  					  verbose, "intermediate variable", outcome="Z",  discreteSL= g.discreteSL))
+  		g.Delta <- suppressWarnings(estimateG(d=data.frame(Delta,Z, A, W[,retain.W]), pDelta1, g.Deltaform, 
+  								 g.SL.library,id=id, V=V, verbose, "missingness mechanism", outcome="D",  discreteSL= g.discreteSL)) 
     	ZAD <- cbind(D1Z0A0 = .bound((1-g$g1W)*(1-g.z$g1W[,"A0"])*g.Delta$g1W[,"Z0A0"], gbound),
   					  D1Z0A1 = .bound(g$g1W*(1-g.z$g1W[,"A1"])*g.Delta$g1W[,"Z0A1"], gbound),
   					  D1Z1A0 = .bound((1-g$g1W)*g.z$g1W[,"A0"]*g.Delta$g1W[,"Z1A0"], gbound),
@@ -1459,15 +1635,22 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
   	   adjustZero <- colSums(ZAD)==0
   	   ZAD[,adjustZero] <- 10^-9
   	   	for (z in 0:1){
-  	     	H0W <- (1-A)*(Z==z)/ZAD[,z*2+1]
-  			H1W <- A*(Z==z) /ZAD[,z*2+2]
+  	   		if (target.gwt){
+  	   			H0W <- (1-A)*(Z==z)
+  				H1W <- A*(Z==z) 
+  				wt <- (1-A)*(Z==z)/ZAD[,z*2+1] + A*(Z==z) /ZAD[,z*2+2]
+  				hCounter <- matrix(1, nrow = length(Y), ncol = 2)
+  	   		} else {
+  	     		H0W <- (1-A)*(Z==z)/ZAD[,z*2+1]
+  				H1W <- A*(Z==z) /ZAD[,z*2+2]
+  				wt <- rep(1, length(A))
+  				hCounter <- cbind(1/ZAD[,z*2+1], 1/ZAD[,z*2+2])
+  			}
   			suppressWarnings(
   				epsilon <- coef(glm(stage1$Ystar~-1 + offset(Q$Q[,"QAW"]) + H0W + H1W, family=Q$family,
-  					  subset=(Delta==1 & Z==z)))
+  					  weights = wt, subset=(Delta==1 & Z==z)))
   			)  			
-
-  			hCounter <- cbind(1/ZAD[,z*2+1], 1/ZAD[,z*2+2])
- 			Qstar <- Q$Q[,c(1, z*2+2, z*2+3)] + c((epsilon[1]*H0W + epsilon[2]*H1W), 
+		 	Qstar <- Q$Q[,c(1, z*2+2, z*2+3)] + c((epsilon[1]*H0W + epsilon[2]*H1W), 
  												        epsilon[1]*hCounter[,1], epsilon[2]*hCounter[,2])
 			colnames(Qstar) <- c("QAW", "Q0W", "Q1W") 
 			newYstar <- stage1$Ystar     
@@ -1485,7 +1668,7 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
    	   		Qreturn <- Q
    	   		Qreturn$Q <- Qinit.return[,-1]
    	   		returnVal[[z+1]] <- list(estimates=res, Qinit=Qreturn, g=g, g.Z=g.z, g.Delta=g.Delta, 
-   	   									 Qstar=Qstar[,-1], epsilon=epsilon)
+   	   									 Qstar=Qstar[,-1], epsilon=epsilon, gbound = gbound, W.retained = colnames(W)[retain.W])
   		}
   		class(returnVal[[1]]) <- class(returnVal[[2]]) <- "tmle"
   		class(returnVal) <- "tmle.list"

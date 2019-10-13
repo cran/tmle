@@ -1,3 +1,23 @@
+Changes/Bug Fixes in Version 1.4.0
+
+--  Default settings have changed from the previous versions
+
+    -- New tuning parameters control estimation of g, and choice of targeting procedure
+        -- prescreenW.g = TRUE.  Covariates included in the models for the components of g are now pre-screened by default to exclude those not associated with residual bias after the initial estimation of Q.  (Set to FALSE to replicate behavior in older versions).
+
+       -- target.gWt = TRUE. The targeting procedure now incorporates into the weights when fitting epsilon by maximum likelihood, rather than in the denominator of the clever covariates. (Set to FALSE to replicate behavior in older versions.) 
+
+    -- Q.SL.library and g.SL.library are now defined as SL.glm, SL.dbarts, and SL.glmnet, (formerly, SL.glm, SL.step, and SL.glm.interaction).
+
+    -- Qbounds that are not specified by the user are now set to 1% beyond the range of the observed Y (formerly 10%).
+
+    -- cvQinit is now set to TRUE so the initial estimate of Q returns cross-validated predictions by default (formerly FALSE)
+
+    -- alpha is now set to 0.9995 (formerly 0.995).  
+
+  -- automatic = TRUE.  Sets all tuning parameters to their default values, ignoring user-specified values. Also data-adaptively sets V based on sample size ('help tmle' for more details).
+
+
 Changes/Bug Fixes in Version 1.3.0-2
 
 -- W can now be passed in as a vector, matrix, or dataframe

@@ -1,5 +1,5 @@
 \name{summary.tmle}
-\Rdversion{1.3.0-2}
+\Rdversion{1.4.0}
 \alias{summary.tmle}
 \alias{print.summary.tmle}
 \alias{print.tmle}
@@ -32,14 +32,17 @@ These functions are all \link{methods} for class \code{tmle}, \code{tmle.list}, 
   \item{gterms}{terms in the treatment mechanism model}
   \item{gcoef}{coefficient of each term in model for treatment mechanism}
   \item{gtype}{description of estimation procedure for treatment mechanism, e.g. "SuperLearner"}
+  \item{gdiscreteSL}{flag indicating whether discrete SL or ensemble SL was used for treatment mechanism estimation}
   \item{g.Zmodel}{model used to estimate intermediate variable assignment mechanism \code{g.Z}}
   \item{g.Zterms}{terms in the intermediate mechanism model}
   \item{g.Zcoef}{coefficient of each term in model for intermediate mechanism}
   \item{g.Ztype}{description of estimation procedure for intermediate variable}
+  \item{g.ZdiscreteSL}{flag indicating whether discrete SL or ensemble SL was used for intermediate variable estimation}
   \item{g.Deltamodel}{model used to estimate missingness mechanism \code{g.Delta}}
   \item{g.Deltaterms}{terms in the missingness mechanism model}
   \item{g.Deltacoef}{coefficient of each term in model for missingness mechanism}
   \item{g.Deltatype}{description of estimation procedure for missingness}
+  \item{g.DeltadiscreteSL}{flag indicating whether discrete SL or ensemble SL was used for missingness estimation}
 }
 \details{\code{print.tmle} prints the estimate, variance, p-value, and 95\% confidence interval only.  \code{print.summary.tmle}, called indirectly by entering the command \kbd{summary(result)} (where \code{result} has class \code{tmle}), outputs additional information.  Controlled direct effect estimates have class \code{tmle.list},  a list of two objects of class \code{tmle}.  The first item corresponds to \eqn{Z=0}, the second to \eqn{Z=1}}  
 \author{Susan Gruber}

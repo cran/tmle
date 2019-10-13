@@ -1,5 +1,5 @@
 \name{calcParameters}
-\Rdversion{1.3.0-2}
+\Rdversion{1.4.0}
 \alias{calcParameters}
 \title{Calculate Parameter Estimates (calcParameters)}
 \description{
