@@ -1,5 +1,5 @@
 \name{tmle}
-\Rdversion{1.4.0}
+\Rdversion{1.4.0.1}
 \alias{tmle}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{Targeted Maximum Likelihood Estimation}

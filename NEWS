@@ -1,6 +1,6 @@
-Changes/Bug Fixes in Version 1.4.0
+Changes/Bug Fixes in Version 1.4.0 and1.4.0.1
 
---  Default settings have changed from the previous versions
+--  Default settings have changed from the previous versions, and some new arguments.
 
     -- New tuning parameters control estimation of g, and choice of targeting procedure
         -- prescreenW.g = TRUE.  Covariates included in the models for the components of g are now pre-screened by default to exclude those not associated with residual bias after the initial estimation of Q.  (Set to FALSE to replicate behavior in older versions).
@@ -15,7 +15,9 @@ Changes/Bug Fixes in Version 1.4.0
 
     -- alpha is now set to 0.9995 (formerly 0.995).  
 
-  -- automatic = TRUE.  Sets all tuning parameters to their default values, ignoring user-specified values. Also data-adaptively sets V based on sample size ('help tmle' for more details).
+  -- automatic = FALSE.  Sets all tuning parameters to their default values, overriding user-specified values. Also data-adaptively sets V based on sample size ('help tmle' for more details).
+
+  -- Version 1.4.0.1 changes depends to suggests for dbarts and gam.
 
 
 Changes/Bug Fixes in Version 1.3.0-2

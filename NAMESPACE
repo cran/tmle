@@ -1,12 +1,10 @@
 ## name spaces needed for S3 methods
-import(SuperLearner)
-import(dbarts)
-import(gam)
-import(glmnet)
 importFrom("stats", "as.formula", "binomial", "coef", "formula",
              "gaussian", "glm", "model.frame", "model.matrix", "plogis",
              "pnorm", "poisson", "predict", "qlogis", "var", "cor")
 importFrom("utils", "RShowDoc", "packageDescription")
+import(glmnet)
+import(SuperLearner)
 S3method(print, tmle)
 S3method(print, tmle.list)
 S3method(print, summary.tmle)

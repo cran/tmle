@@ -303,8 +303,10 @@ tmle.SL.dbarts2 <-  function(Y, X, newX, family, obsWeights, id, sigest = NA, si
                      k = 2, power = 2.0, base = 0.95, binaryOffset = 0.0, ntree = 200, ndpost = 1000,  nskip = 100, 
                      printevery = 100,  keepevery = 1,  keeptrainfits = TRUE,   usequants = FALSE,
                      numcut = 100, printcutoffs = 0,  nthread = 1,   keepcall = TRUE,   verbose = FALSE, ...) {
-  
- # 	SuperLearner:::.SL.require("dbarts")
+                     	
+    if (!requireNamespace("dbarts", quietly = FALSE)) {
+        stop("Loading required package dbarts failed", call. = FALSE)
+    }
   	model = dbarts::bart(x.train = X,  y.train = Y,   x.test = newX, sigest = sigest,  sigdf = sigdf, sigquant = sigquant,
                  k = k,  power = power, base = base,  binaryOffset = binaryOffset,   weights = obsWeights,  ntree = ntree,
                  ndpost = ndpost,   nskip = nskip,   printevery = printevery,  keepevery = keepevery,  keeptrainfits = keeptrainfits,
@@ -324,8 +326,10 @@ tmle.SL.dbarts2 <-  function(Y, X, newX, family, obsWeights, id, sigest = NA, si
 }
 
 predict.tmle.SL.dbarts2 <- function(object, newdata, family, ...) {
- # SuperLearner:::.SL.require("dbarts")
-  pred = predict(object$object, test = newdata) 
+    if (!requireNamespace("dbarts", quietly = FALSE)) {
+        stop("Loading required package dbarts failed", call. = FALSE)
+    }
+     pred = predict(object$object, test = newdata) 
    if (family$family == "gaussian") {
     	pred = colMeans(pred) 
  	 }  
@@ -642,6 +646,7 @@ tmleMSM <- function(Y,A,W,V,T=rep(1,length(Y)), Delta=rep(1, length(Y)), MSM, v=
 	if(!.verifyArgs(Y,Z=NULL,A,cbind(V,W,T),Delta, Qform, gform, hAVform, g.Deltaform)){
 		stop()
 	}
+	
 	maptoYstar <- fluctuation=="logistic" | family=="binomial"
 
 #---- Stage 1 -----
@@ -808,7 +813,6 @@ tmleMSM <- function(Y,A,W,V,T=rep(1,length(Y)), Delta=rep(1, length(Y)), MSM, v=
     printcutoffs = 0, nthread = 1, keepcall = TRUE, verbose = FALSE, 
     ...) 
 {
-	    #require(SuperLearner)
 		tmle.SL.dbarts2 (Y, X, newX, family, obsWeights, id, sigest = sigest, sigdf = sigdf, sigquant=sigquant,
 			k = k, power = power, base = base, binaryOffset = binaryOffset, ntree=ntree, ndpost = ndpost, nskip = nskip,
 			printevery = printevery, keepevery = keepevery, keeptrainfits = keeptrainfits, usequants = usequants, numcut = numcut,
@@ -1006,7 +1010,6 @@ estimateQ <- function (Y,Z,A,W, Delta, Q, Qbounds, Qform, maptoYstar,
   	  	    	Qinit <- list(Q=Q, family=Qfamily, coef=coef, type=type)
   	  	} else {
   			if(verbose) {cat("\t using SuperLearner\n")}
-  				#require(SuperLearner)
   				n <- length(Y)
   				X <- data.frame(Z,A,W)
   				X00 <- data.frame(Z=0,A=0, W)
@@ -1122,6 +1125,7 @@ estimateQ <- function (Y,Z,A,W, Delta, Q, Qbounds, Qform, maptoYstar,
     if(NCOL(W) < min.retain){
     	min.retain <- NCOL(W)
     }
+    #require(glmnet)
     m.lasso <- cv.glmnet(W[Delta == 1,], Y[Delta == 1], family =  family, offset = QAW[Delta == 1])
 	beta <- coef(m.lasso, s = m.lasso$lambda.min)[-1] # ignore the intercept
 	retain <- which(abs(beta) > 0)
@@ -1488,7 +1492,7 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
    		Z <- rep(1, length(Y))	
    	}
    	CDE <- length(unique(Z))>1
-	
+   		
 	# Stage 1	
  	stage1 <- .initStage1(Y, A, Q, Q.Z1, Delta, Qbounds, alpha, maptoYstar, family)		
 	Q <- suppressWarnings(estimateQ(Y=stage1$Ystar,Z,A,W, Delta, Q=stage1$Q, Qbounds=stage1$Qbounds, Qform, 

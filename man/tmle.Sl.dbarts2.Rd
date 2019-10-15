@@ -1,5 +1,5 @@
 \name{tmle.SL.dbarts2}
-\Rdversion{1.4.0}
+\Rdversion{1.4.0.1}
 \alias{tmle.SL.dbarts2}
 \alias{tmle.SL.dbarts.k.5}
 \alias{predict.tmle.SL.dbarts2}
@@ -55,6 +55,5 @@ tmle.SL.dbarts.k.5(Y, X, newX, family, obsWeights, id, sigest = NA, sigdf = 3,
 }
 \author{Chris Kennedy and Susan Gruber}
 \seealso{
-\code{\link{bart}}
 \code{\link{SuperLearner}}
 }
