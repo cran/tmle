@@ -1,4 +1,4 @@
-
+# 1.5.0
 tmleNews <- function(...){
 	RShowDoc("NEWS", package="tmle",...)
 }
@@ -32,6 +32,7 @@ summary.tmle <- function(object,...) {
 		if(!is.null(object$g)){
 		if (!is.null(object$g$coef)) {
 			gbd <- object$g$bound
+			gbd.ATT <- object$g$bound.ATT
 			gcoef <- object$g$coef
 			if(class(gcoef) == "matrix"){
 				gterms <- colnames(gcoef)
@@ -70,8 +71,9 @@ summary.tmle <- function(object,...) {
 			} 
 		}}
 		summary.tmle <- list(estimates=object$estimates,
-						Qmodel=Qmodel, Qterms=Qterms, Qcoef=Qcoef, Qtype=object$Qinit$type,
-						gbd=gbd, gmodel=gmodel, gterms=gterms, gcoef=gcoef,gtype=object$g$type, gdiscreteSL= object$g$discreteSL,
+						Qmodel=Qmodel, Qterms=Qterms, Qcoef=Qcoef, Qtype=object$Qinit$type, QRsq=object$Qinit$Rsq,
+						QRsq.type = object$Qinit$Rsq.type, 
+						gbd=gbd, gbd.ATT = gbd.ATT, gmodel=gmodel, gterms=gterms, gcoef=gcoef,gtype=object$g$type, gdiscreteSL= object$g$discreteSL, gAUC = object$g$AUC,
 						g.Zmodel=g.Zmodel, g.Zterms=g.Zterms, g.Zcoef=g.Zcoef, g.Ztype=object$g.Z$type, g.ZdiscreteSL= object$g.Z$discreteSL,
 						g.Deltamodel=g.Deltamodel, g.Deltaterms=g.Deltaterms, g.Deltacoef=g.Deltacoef, g.Deltatype=object$g.Delta$type,
 						g.DeltadiscreteSL=object$g.Delta$discreteSL)
@@ -99,6 +101,9 @@ print.summary.tmle <- function(x,...) {
   			cat("\t", terms[i], extra[i], x$Qcoef[i], "\n")
   		}
   	}
+  	if(!is.null(x$QRsq)){
+  		cat("\n\t", x$QRsq.type, ": ", round(x$QRsq,4), "\n")
+  	}
   	cat("\n Estimation of g (treatment mechanism)\n")
   	cat("\t Procedure:", x$gtype)
   	if(!(is.null(x$gdiscreteSL))) {
@@ -107,6 +112,9 @@ print.summary.tmle <- function(x,...) {
   		 } else {
   		 	cat(", ensemble")
   		 }
+  	}
+  	if(!(is.null(x$gAUC))){
+  		cat("\t Empirical AUC =", round(x$gAUC, 4), "\n") 
   	}
   	cat("\n")
   		
@@ -120,6 +128,7 @@ print.summary.tmle <- function(x,...) {
   	}}
   	cat("\n Estimation of g.Z (intermediate variable assignment mechanism)\n")
   	cat("\t Procedure:", x$g.Ztype, "\n")
+  	
   	if(!(is.na(x$g.Zcoef[1]))){		
   		cat("\t Model:\n\t\t",x$g.Zmodel, "\n")
   		cat("\n\t Coefficients: \n")
@@ -129,7 +138,16 @@ print.summary.tmle <- function(x,...) {
   			cat("\t", terms[i], extra[i], x$g.Zcoef[i], "\n")
   	}}
   	cat("\n Estimation of g.Delta (missingness mechanism)\n")
-  	cat("\t Procedure:", x$g.Deltatype, "\n")
+  	cat("\t Procedure:", x$g.Deltatype)
+  	if(!(is.null(x$g.DeltadiscreteSL))) {
+  		 if (x$g.DeltadiscreteSL) { 
+  		 	cat(", discrete")
+  		 } else {
+  		 	cat(", ensemble")
+  		 }
+  	}
+  	cat("\n")
+  	
   	if(!(is.na(x$g.Deltacoef[1]))){		
   		cat("\t Model:\n\t\t",x$g.Deltamodel, "\n")
   		cat("\n\t Coefficients: \n")
@@ -138,7 +156,10 @@ print.summary.tmle <- function(x,...) {
   		for(i in 1:length(x$g.Deltacoef)){
   			cat("\t", terms[i], extra[i], x$g.Deltacoef[i], "\n")
   	}}
-  	cat("\n Bounds on g: (", x$gbd,")\n")
+  	cat("\n Bounds on g:", paste0("(", round(min(x$gbd),4), ", ", round(max(x$gbd),4),")"), "\n")
+  	if(!is.null(x$gbd.ATT)){
+  		cat("\n Bounds on g for ATT/ATE:", paste0("(", round(min(x$gbd.ATT),4), ", ", round(max(x$gbd.ATT),4),")"), "\n")
+  	}
 	if(!is.null(x$estimates$EY1)){
 			cat("\n Population Mean")
 			cat("\n   Parameter Estimate: ", signif(x$estimates$EY1$psi,5))
@@ -314,7 +335,7 @@ tmle.SL.dbarts2 <-  function(Y, X, newX, family, obsWeights, id, sigest = NA, si
                  keeptrees = TRUE,  verbose = verbose)
  
  	 if (family$family == "gaussian") {
-    	pred = model$yhat.test.mean
+    	pred = colMeans(model$yhat.test)
  	 }  
   	if (family$family == "binomial") {
     	pred = colMeans(stats::pnorm(model$yhat.test))
@@ -1110,8 +1131,9 @@ estimateQ <- function (Y,Z,A,W, Delta, Q, Qbounds, Qform, maptoYstar,
 }
 
 #---------------.prescreenW.g----------------------
-# Screen covariates for association with residual after 
-# initial regression to use in estimating g
+# Screen covariates for association with Y or residual 
+# depending on value of RESID flag
+# after initial regression to use in estimating g
 # selects lasso covariates with non-zero coefficients
 # using initial fit as offset, so it's a function of association with residuals
 # 	Y - outcome on same scale as Q
@@ -1121,12 +1143,17 @@ estimateQ <- function (Y,Z,A,W, Delta, Q, Qbounds, Qform, maptoYstar,
 # family = "binomial", "gaussian", or "poisson", set by estimateQ
 # min.retain = minimum number of of variables to retain
 #------------------------------------------------------
-.prescreenW.g <- function(Y, A, W, Delta, QAW, family, min.retain){  
+.prescreenW.g <- function(Y, A, W, Delta, QAW, family, min.retain, RESID=FALSE){  
     if(NCOL(W) < min.retain){
     	min.retain <- NCOL(W)
     }
     #require(glmnet)
-    m.lasso <- cv.glmnet(W[Delta == 1,], Y[Delta == 1], family =  family, offset = QAW[Delta == 1])
+    if(RESID){
+    	offset <- QAW[Delta == 1]
+    } else {
+    		offset <- NULL
+    	}
+    m.lasso <- cv.glmnet(W[Delta == 1,], Y[Delta == 1], family =  family, offset = offset)
 	beta <- coef(m.lasso, s = m.lasso$lambda.min)[-1] # ignore the intercept
 	retain <- which(abs(beta) > 0)
 	if (length(retain) < min.retain ){
@@ -1389,7 +1416,8 @@ calcParameters <- function(Y,A, I.Z, Delta, g1W, g0W, Q, mu1, mu0, id, family){
 # g.Deltaform - optional glm regression formula  
 # Q.SL.library- optional Super Learner library for estimation of Q, 
 # cvQinit - if TRUE obtain cross-validated initial Q
-# g.SL.library - optional library for estimation of g and g.Delta
+# g.SL.library - optional library for estimation of g1W
+# g.Delta.SL.library - optional library for estimation of p(Delta = 1 | A, L, W)
 # family - family specification for regression models, defaults to gaussian
 # fluctuation - "logistic" (default) or "linear" (for targeting step)
 # alpha - bound on predicted probabilities for Q (0.005, 0.995 default)
@@ -1398,26 +1426,32 @@ calcParameters <- function(Y,A, I.Z, Delta, g1W, g0W, Q, mu1, mu0, id, family){
 # verbose - flag for controlling printing of messages
 # Q.discreteSL - flag to use discreteSL instead of ensemble SL, ignored when g or gform supplied
 # g.discreteSL - flag to use discreteSL instead of ensemble SL, ignored when g or gform supplied
+# RESID - whether or not to screen the residuals for association with Ystar with initial offset(logit(QAW))
 # target.gwt - if TRUE, g is in the weight instead of in the clever covariate
 #-------------------------------------------------------------------------------
-tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),  
+tmle <- function(Y,A,W, Z=NULL, Delta=rep(1,length(Y)),  
 				Q=NULL, Q.Z1=NULL, Qform=NULL, Qbounds=NULL, 
 				Q.SL.library=c("SL.glm", "tmle.SL.dbarts2", "SL.glmnet"), cvQinit= TRUE,
-				g1W=NULL, gform=NULL, gbound=0.025, 
+				g1W=NULL, gform=NULL, gbound= 5/sqrt(length(Y))/log(length(Y)), 
 				pZ1=NULL, g.Zform=NULL,
 				pDelta1=NULL, g.Deltaform=NULL, 
 				g.SL.library=c("SL.glm", "tmle.SL.dbarts.k.5", "SL.gam"),
+				g.Delta.SL.library = c("SL.glm", "tmle.SL.dbarts.k.5", "SL.gam"),
 				family="gaussian", fluctuation="logistic", 
 				alpha  = 0.9995, id=1:length(Y), V = 5, verbose=FALSE, Q.discreteSL=FALSE, 
-				g.discreteSL = FALSE, prescreenW.g = TRUE, min.retain = 2, target.gwt =TRUE,
+				g.discreteSL = FALSE, g.Delta.discreteSL=FALSE, prescreenW.g = TRUE, min.retain = 2, RESID=FALSE, target.gwt =TRUE,
 				automate = FALSE) {
 	# Initializations
 	psi.tmle <- varIC <- CI <- pvalue <- NA
+	colnames(W) <- .setColnames(colnames(W), NCOL(W), "W")
+# change factors to dummies
+	tempY <- Y
+	tempY[is.na(tempY)] <-0 
+	W <- model.matrix(tempY~ ., data = data.frame(tempY, W))[,-1]
 	if (is.vector(W)) {
 		W <- as.matrix(W)
 	}
-	# W <- as.matrix(W)  # if W is a dataframe with factors, changing to matrix will blow it
-	colnames(W) <- .setColnames(colnames(W), NCOL(W), "W")
+	
 	if (identical(family, binomial)) {
         family == "binomial"
     }else if (identical(family, gaussian)) {
@@ -1435,27 +1469,21 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
 	# Set up default values for "automate" mode
 	if (automate){
 		Qform <- gform <- g.Zform <- g.Deltaform <- NULL
-		Q.SL.library <- g.SL.library <- c("SL.glm", "tmle.SL.dbarts2", "SL.glmnet")
+		Q.SL.library <- g.SL.library <- g.Delta.SL.library <- c("SL.glm", "tmle.SL.dbarts2", "SL.glmnet")
 		cvQinit <- TRUE
 		alpha <- .9995
 		Q.discreteSL <- g.discreteSL <- FALSE
 		prescreenW.g <- TRUE
 		target.gwt <- TRUE
+		gbound <- 5/sqrt(n)/log(n)
 		if (n <= 100) {
 			V <- 20
-			gbound <- .1
 		} else if (n <= 500) {
 			V <- 10
-			gbound <- .05
 		} else if (n <= 1000) {
 			V <- 5
-			gbound <- .025
-		} else if (n  < 10000){
-			V <- 3
-			gbound <- .025
 		} else {
 			V <- 2
-			gbound <- .01
 		}
 	}
 	
@@ -1503,46 +1531,48 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
 	if(length(gbound)==1){
 		if(length(unique(A))==1 & length(unique(Z))==1){  # EY1 only, no controlled direct effect
 			gbound <- c(gbound,1)
+			gbound.ATT <- NULL
 		} else {
-			gbound <- c(gbound, 1-gbound)
+			gbound.ATT <- c(gbound, 1-gbound)
+			gbound <- c(min(gbound), 1)
 		}
+	} else {
+		gbound.ATT <- gbound
 	}
 	# # if prescreenW.g, keep all the variables in the gform, and keep a minimum of 2 variables.
 	# pre-screening won't work for factors.
-	if(is.data.frame(W)){
-			W.factors <-  any(lapply(W, class) == "factor")
-	} else {
-			W.factors <- any(apply(W, 2, class) == "factor")
-	}
 	prescreenW.g <- prescreenW.g & is.null(gform)  # don't prescreen if variables are already in a specified regression model
-	if (W.factors & verbose & prescreenW.g){
-		print("Warning. Because some variables in W are factors,  covariates will not be pre-screened before estimating G.") 
-	}
-	if((NCOL(W) < min.retain) | W.factors | !prescreenW.g ) {
+	if((NCOL(W) < min.retain) | !prescreenW.g ) {
 		retain.W <- 1:NCOL(W)
-	} else {
+	} else {	 
 		if ((identical(family, gaussian) | identical(family, "gaussian")) & Q$family == "binomial") {
 				Q.offset <-  plogis(Q$Q[,"QAW"])
 		} else {
 				Q.offset <- Q$Q[,"QAW"]
-		}		 
-		retain.W <- .prescreenW.g(stage1$Ystar, A, as.matrix(W), Delta , QAW = Q.offset,  family = family, min.retain)
-	}
+		}	
+		retain.W <- .prescreenW.g(stage1$Ystar, A, as.matrix(W), Delta , QAW = Q.offset,  family = family, min.retain, RESID=RESID)
+	}	
  	g <- suppressWarnings(estimateG(d=data.frame(A,W[,retain.W]), g1W, gform, g.SL.library, id=id, V = V, verbose, "treatment mechanism", outcome="A",  discreteSL = g.discreteSL)) 
+ 	g$bound.ATT <- gbound.ATT
  	g$bound <- gbound
  	if(g$type=="try-error"){
  		stop("Error estimating treatment mechanism (hint: only numeric variables are allowed)") 
  	}
-	
+ 	
+	if(length(unique(A)) == 2 & requireNamespace("ROCR", quietly=TRUE)){
+		g$AUC = as.numeric(ROCR::performance(ROCR::prediction(g$g1W,A), measure = "auc")@y.values)
+	}
   	if(!CDE){
   		g.z <- NULL
   		g.z$type="No intermediate variable"
   		g.z$coef=NA
   		# if prescreenW.g, keep all the variables in the g.Deltaform, or keep a minimum of 2 variables. Always keep A.
+  		
+  		  		
   		g.Delta <- suppressWarnings(estimateG(d=data.frame(Delta, Z=1, A, W[,retain.W]), pDelta1, g.Deltaform, 
- 	 		g.SL.library,id=id, V = V, verbose = verbose, "missingness mechanism", outcome="D",  discreteSL= g.discreteSL)) 
- 		g1W.total <- .bound(g$g1W*g.Delta$g1W[,"Z0A1"], gbound)
-  		g0W.total <- .bound((1-g$g1W)*g.Delta$g1W[,"Z0A0"], gbound)  
+ 	 		SL.library = g.Delta.SL.library, id=id, V = V, verbose = verbose, "missingness mechanism", outcome="D",  discreteSL= g.Delta.discreteSL)) 
+ 		g1W.total <- .bound(g$g1W*g.Delta$g1W[,"Z0A1"], g$bound)
+  		g0W.total <- .bound((1-g$g1W)*g.Delta$g1W[,"Z0A0"], g$bound) 
   		if(all(g1W.total==0)){g1W.total <- rep(10^-9, length(g1W.total))}
   		if(all(g0W.total==0)){g0W.total <- rep(10^-9, length(g0W.total))}
   		
@@ -1588,7 +1618,7 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
         	Q.ATT <- (Q$Q- stage1$ab[1])/diff(stage1$ab)  # changed to should be Q$Q
         	res.ATT <- try(oneStepATT(Y = stage1$Ystar, A = A, Delta, Q = Q.ATT, g1W = g$g1W, 
         						pDelta1 = g.Delta$g1W[,c("Z0A0", "Z0A1")],
-        						depsilon = depsilon, max_iter = max(1000, 2/depsilon), gbounds = gbound, Qbounds = stage1$Qbound))
+        						depsilon = depsilon, max_iter = max(1000, 2/depsilon), gbounds = gbound.ATT, Qbounds = stage1$Qbound))
         	if(!(identical(class(res.ATT), "try-error"))){
         	 		ATT$psi <- res.ATT$psi * diff(stage1$ab) 
         	 		ATT$converged <- res.ATT$conv
@@ -1604,7 +1634,7 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
 
 			res.ATC <- try(oneStepATT(Y = stage1$Ystar, A = 1-A, Delta, Q = cbind(QAW = Q.ATT[,1], Q0W = Q.ATT[,"Q1W"], Q1W = Q.ATT[,"Q0W"]), 
 							g1W = 1-g$g1W, pDelta1 = g.Delta$g1W[,c("Z0A1", "Z0A0")],
-        				  depsilon = depsilon, max_iter = max(1000, 2/depsilon), gbounds = gbound, Qbounds = stage1$Qbound))
+        				  depsilon = depsilon, max_iter = max(1000, 2/depsilon), gbounds = gbound.ATT, Qbounds = stage1$Qbound))
         				  
         	if(!(identical(class(res.ATC), "try-error"))){
         		ATC$psi <- -res.ATC$psi * diff(stage1$ab) 
@@ -1623,15 +1653,34 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
 			res$IC$IC.ATT <- IC.ATT
 			res$IC$IC.ATC <- IC.ATC
 	}
+	    # calculate Rsq - complete case
+	  #  browser()
+	    m.rsq <- glm(Y~ 1, family = family)
+	    Yhat <- predict(m.rsq, newdata = data.frame(A),  type = "response")
+	    Q$Rsq  <-  NULL
+	     
+		if(family == "binomial"){
+			Q$Rsq <- 1 - sum(Delta * ( Y * log(Q$Q[,"QAW"]) + (1-Y)*log(1-Q$Q[,"QAW"]))) /
+			 	                             sum(Delta * ( Y * log(Yhat) + (1-Y)*log(1-Yhat)))		
+			 Q$Rsq.type <- "pseudo R squared"
+		} else {
+			Q$Rsq <- 1 - sum((Y[Delta == 1]-Q$Q[Delta == 1,"QAW"])^2)/ sum((Y[Delta == 1]-mean(Y[Delta==1]))^2)
+			Q$Rsq.type <- "R squared"
+		}
+		if (cvQinit){
+			Q$Rsq.type <- paste("Cross-validated", Q$Rsq.type)
+		} else {
+			Q$Rsq.type <- paste("Empirical", Q$Rsq.type)
+		}
 		Q$Q <- Q$Q[,-1]
-  		returnVal <- list(estimates=res, Qinit=Q, g=g, g.Z=g.z, g.Delta=g.Delta, Qstar=Qstar[,-1], epsilon=epsilon, gbound = gbound, W.retained = colnames(W)[retain.W]) 
+  		returnVal <- list(estimates=res, Qinit=Q, g=g, g.Z=g.z, g.Delta=g.Delta, Qstar=Qstar[,-1], epsilon=epsilon, gbound = gbound, gbound.ATT = gbound.ATT, W.retained = colnames(W)[retain.W]) 
   		class(returnVal) <- "tmle"
   	} else {
   		returnVal <- vector(mode="list", length=2)
   		g.z <- suppressWarnings(estimateG(d=data.frame(Z,A,W[,retain.W]), pZ1, g.Zform, g.SL.library, id=id, V = V, 
   					  verbose, "intermediate variable", outcome="Z",  discreteSL= g.discreteSL))
   		g.Delta <- suppressWarnings(estimateG(d=data.frame(Delta,Z, A, W[,retain.W]), pDelta1, g.Deltaform, 
-  								 g.SL.library,id=id, V=V, verbose, "missingness mechanism", outcome="D",  discreteSL= g.discreteSL)) 
+  								 g.Delta.SL.library,id=id, V=V, verbose, "missingness mechanism", outcome="D",  discreteSL= g.Delta.discreteSL)) 
     	ZAD <- cbind(D1Z0A0 = .bound((1-g$g1W)*(1-g.z$g1W[,"A0"])*g.Delta$g1W[,"Z0A0"], gbound),
   					  D1Z0A1 = .bound(g$g1W*(1-g.z$g1W[,"A1"])*g.Delta$g1W[,"Z0A1"], gbound),
   					  D1Z1A0 = .bound((1-g$g1W)*g.z$g1W[,"A0"]*g.Delta$g1W[,"Z1A0"], gbound),
@@ -1669,10 +1718,12 @@ tmle <- function(Y,A,W,Z=NULL, Delta=rep(1,length(Y)),
     		colnames(Qinit.return) <- c("QAW", "Q0W", "Q1W")
     		res <- calcParameters(newYstar, A,I.Z=as.integer(Z==z), Delta, g1W=ZAD[,z*2+2], g0W=ZAD[,z*2+1],  
    	   					  Qstar, mu1=mean(Qstar[,"Q1W"]), mu0=mean(Qstar[,"Q0W"]), id, family)
-   	   		Qreturn <- Q
-   	   		Qreturn$Q <- Qinit.return[,-1]
+   	   		Qreturn <- Q   	   		
+   	       Qreturn$Q <- Qinit.return[,-1]
+ 		
+   	   		g$bound.ATT <- NULL
    	   		returnVal[[z+1]] <- list(estimates=res, Qinit=Qreturn, g=g, g.Z=g.z, g.Delta=g.Delta, 
-   	   									 Qstar=Qstar[,-1], epsilon=epsilon, gbound = gbound, W.retained = colnames(W)[retain.W])
+   	   									 Qstar=Qstar[,-1], epsilon=epsilon, gbound = gbound, gbound.ATT = NULL, W.retained = colnames(W)[retain.W])
   		}
   		class(returnVal[[1]]) <- class(returnVal[[2]]) <- "tmle"
   		class(returnVal) <- "tmle.list"

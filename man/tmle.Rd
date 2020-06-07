@@ -1,5 +1,5 @@
 \name{tmle}
-\Rdversion{1.4.0.1}
+\Rdversion{1.5.0-1}
 \alias{tmle}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{Targeted Maximum Likelihood Estimation}
@@ -8,18 +8,20 @@ Targeted maximum likelihood estimation of parameters of a marginal structural mo
 \usage{
 tmle(Y, A, W, Z=NULL, Delta = rep(1,length(Y)), Q = NULL, Q.Z1 = NULL, Qform = NULL, 
      Qbounds = NULL, Q.SL.library = c("SL.glm", "tmle.SL.dbarts2", "SL.glmnet"), 
-     cvQinit = TRUE, g1W = NULL, gform = NULL, gbound = 0.025,  pZ1=NULL,
+     cvQinit = TRUE, g1W = NULL, gform = NULL, 
+     gbound = 5/sqrt(length(Y))/log(length(Y)),  pZ1=NULL,
      g.Zform = NULL, pDelta1 = NULL, g.Deltaform = NULL, 
      g.SL.library = c("SL.glm", "tmle.SL.dbarts.k.5", "SL.gam"),
+     g.Delta.SL.library =  c("SL.glm", "tmle.SL.dbarts.k.5", "SL.gam"),
      family = "gaussian", fluctuation = "logistic", alpha = 0.9995, id=1:length(Y), V = 5,
-     verbose = FALSE, Q.discreteSL=FALSE, g.discreteSL=FALSE, prescreenW.g=TRUE, 
-     min.retain = 2, target.gwt = TRUE, automate=FALSE)
+     verbose = FALSE, Q.discreteSL=FALSE, g.discreteSL=FALSE, g.Delta.discreteSL=FALSE,
+     prescreenW.g=TRUE, min.retain = 2, RESID=FALSE, target.gwt = TRUE, automate=FALSE)
 }
 \arguments{
  \item{Y}{continuous or binary outcome variable}
   \item{A}{binary treatment indicator, \code{1} - treatment, \code{0} - control}
   \item{W}{vector, matrix, or dataframe containing baseline covariates}
-  \item{Z}{optional binary indicator for intermediate covariate for conrolled direct effect estimation}
+  \item{Z}{optional binary indicator for intermediate covariate for controlled direct effect estimation}
   \item{Delta}{indicator of missing outcome or treatment assignment.  \code{1} - observed, \code{0} - missing}
   \item{Q}{optional \eqn{nx2} matrix of initial values for \eqn{Q} portion of the likelihood, \eqn{(E(Y|A=0,W), E(Y|A=1,W))}}
   \item{Q.Z1}{optional \eqn{nx2} matrix of initial values for \eqn{Q} portion of the likelihood, \eqn{(E(Y|Z=1,A=0,W), E(Y|Z=1,A=1,W))}. (When specified, values for \eqn{E(Y|Z=0,A=0,W), E(Y|Z=0,A=1,W)} are passed in using the \code{Q} argument}
@@ -31,10 +33,11 @@ tmle(Y, A, W, Z=NULL, Delta = rep(1,length(Y)), Q = NULL, Q.Z1 = NULL, Qform = N
   \item{gform}{optional regression formula of the form \code{A~W}, if specified this overrides the call to \code{SuperLearner}}
   \item{gbound}{value between (0,1) for truncation of predicted probabilities. See \code{Details} section for more information}
   \item{pZ1}{optional\eqn{nx2} matrix of conditional probabilities \eqn{P(Z=1|A=0,W), P(Z=1|A=1,W)}} 
-  \item{g.Zform}{optionalregression formula of the form \code{Z~A+W}, if specified this overrides the call to \code{SuperLearner}} 
+  \item{g.Zform}{optional regression formula of the form \code{Z~A+W}, if specified this overrides the call to \code{SuperLearner}} 
   \item{pDelta1}{optional matrix of conditional probabilities for missingness mechanism, \eqn{nx2} when \code{Z} is \code{NULL} \eqn{P(Delta=1|A=0,W), P(Delta=1|A=1,W)}. \eqn{nx4} otherwise, \eqn{P(Delta=1|Z=0,A=0,W), P(Delta=1|Z=0,A=1,W), P(Delta=1|Z=1,A=0,W), P(Delta=1|Z=1,A=1,W)}}
   \item{g.Deltaform}{optional regression formula of the form \code{Delta~A+W}, if specified this overrides the call to \code{SuperLearner}}
-  \item{g.SL.library}{optional vector of prediction algorithms to use for \code{SuperLearner} estimation of \code{g1W} or \code{pDelta1} }
+  \item{g.SL.library}{optional vector of prediction algorithms to use for \code{SuperLearner} estimation of \code{g1W}}
+\item{g.Delta.SL.library}{optional vector of prediction algorithms to use for \code{SuperLearner} estimation of \code{pDelta1} }
   \item{family}{family specification for working regression models, generally \sQuote{gaussian} for continuous outcomes (default), \sQuote{binomial} for binary outcomes}
   \item{fluctuation}{\sQuote{logistic} (default), or \sQuote{linear}}
   \item{alpha}{used to keep predicted initial values bounded away from (0,1) for logistic fluctuation}
@@ -42,20 +45,22 @@ tmle(Y, A, W, Z=NULL, Delta = rep(1,length(Y)), Q = NULL, Q.Z1 = NULL, Qform = N
   \item{V}{Number of cross-validation folds for estimating Q, and for super learner estimation of g}
   \item{verbose}{status messages printed if set to \code{TRUE} (default=\code{FALSE})}
   \item{Q.discreteSL}{if TRUE, discreteSL is used instead of ensemble SL. Ignored when SL not used to estimate Q} 
-  \item{g.discreteSL}{if TRUE, discreteSL is used instead of ensemble SL. Ignored when SL not used to estimate Q} 
+  \item{g.discreteSL}{if TRUE, discreteSL is used instead of ensemble SL. Ignored when SL not used to estimate g1W} 
+  \item{g.Delta.discreteSL}{if TRUE, discreteSL is used instead of ensemble SL. Ignored when SL not used to estimate P(Delta = 1 | A,W,L)} 
   \item{prescreenW.g}{Screen covariates before estimating g in order to retain only those associated with Stage 1 residuals}
   \item{min.retain}{Minimum number of covariates to retain when prescreening covariates for g. Ignored when prescreenW.g=FALSE} 
+  \item{RESID}{Flag indicating whether to retain covariates associated with the outcome \eqn{RESID=FALSE}, or associated only with the residuals from the outcome regression. Ignored when prescreenW.g=FALSE} 
   \item{target.gwt}{When TRUE, move g from denominator of clever covariate to the weight when fitting epsilon}
-  \item{automate}{When TRUE, all tuning parameters are set to their default values. Number of cross validation folds and truncutation level for g are set data-adaptively based on sample size (see details).}
+  \item{automate}{When TRUE, all tuning parameters are set to their default values. Number of cross validation folds and truncation level for g are set data-adaptively based on sample size (see details).}
 }
 \details{
- \code{gbounds} defaults to (0.025, 0.975) for treatment effect estimates. If only one value is provided,  symmetric truncation levels are assumed. Bounds default to (0.025, 1) for estimating the population mean outcome.  
+ \code{gbounds} Lower bound defaults to lb = 5/sqrt(n)/log(n). For treatment effect estimates and population mean outcome the upper bound defaults to 1. For ATT and ATC, the upper bound defaults to 1- lb.
 
-\code{W} should only contain covariates that are factors when \code{Super Learner} is not used to estimate \code{Q} or \code{g}.
+\code{W} may contain factors. These are converted to indicators via a call to \code{model.matrix}.
 
  Controlled direct effects are estimated when binary covariate \code{Z} is non-null. The tmle function returns an object of class \code{tmle.list}, a list of two items of class \code{tmle}.  The first corresponds to estimates obtained when \code{Z} is fixed at \eqn{0}, the second corresponds to estimates obtained when \code{Z} is fixed at \eqn{1}.
 
-When automate = TRUE the sample size determines the number of cross validation folds, V, and the bound on g as follows: When \eqn{n <= 100}, V= 20 and gbd  = 0.1; When \eqn{100 < n <=500} V=10, gbd = 0.05; When \eqn{500 < n <= 1000} V=5, gbd = 0.025; When \eqn{1000 < n <= 10000} V=3, gbd = 0.025; When {n > 10000} V=2, gbd = 0.01. 
+When automate = TRUE the sample size determines the number of cross validation folds, V: When \eqn{n <= 100}, V= 20; When \eqn{100 < n <=500} V=10; When \eqn{500 < n <= 1000} V=5; Otherwise V=3. Bounds on g set to (5/sqrt(n)/log(n), 1), except for ATT and ATE, where upper bound is 1-lower bound.
 }
 \value{
   \item{estimates}{list with elements EY1 (population mean), ATE (additive treatment effect), ATT (additive treatment effect among the treated), ATC (additive treatment effect among the controls), RR (relative risk), OR (odds ratio). Each element in the estimates of these is itself a list containing 
@@ -67,12 +72,13 @@ When automate = TRUE the sample size determines the number of cross validation f
   \item log.psi - Parameter estimate on log scale (RR and OR parameters)
   \item var.log.psi - Influence-curve based variance of estimate on log scale (RR and OR parameters)
   }}
-  \item{Qinit}{initial estimate of \code{Q}. \code{Qinit$coef} are the coefficients for a \code{glm} model for \code{Q}, if applicable.  \code{Qinit$Q} is an \eqn{nx2} matrix, where \code{n} is the number of observations.  Columns contain predicted values for \code{Q(0,W),Q(1,W)} using the initial fit.  \code{Qinit$type} is method for estimating \code{Q}}
+  \item{Qinit}{initial estimate of \code{Q}. \code{Qinit$coef} are the coefficients for a \code{glm} model for \code{Q}, if applicable.  \code{Qinit$Q} is an \eqn{nx2} matrix, where \code{n} is the number of observations.  Columns contain predicted values for \code{Q(0,W),Q(1,W)} using the initial fit.  \code{Qinit$type} is method for estimating \code{Q}. \code{Qinit$Rsq} is Rsq for initial estimate of Q. \code{Qinit$Rsq.type} empirical or cross-validated (depends on value of cvQinit), Rsq or pseudo-Rsq when Y is binary.}
   \item{Qstar}{targeted estimate of \code{Q}, an \eqn{nx2} matrix with predicted values for \code{Q(0,W), Q(1,W)} using the updated fit}
-  \item{g}{treatment mechanism estimate. A list with four items: \code{g$g1W} contains estimates of \eqn{P(A=1|W)} for each observation, \code{g$coef} the coefficients for the model for \eqn{g} when \code{glm} used, \code{g$type} estimation procedure, \code{g$discreteSL} flag}
+  \item{g}{treatment mechanism estimate. A list with four items: \code{g$g1W} contains estimates of \eqn{P(A=1|W)} for each observation, \code{g$coef} the coefficients for the model for \eqn{g} when \code{glm} used, \code{g$type} estimation procedure, \code{g$discreteSL} flag, \code{g$AUC} empirical AUC if ROCR package is available}
   \item{g.Z}{intermediate covariate assignment estimate (when applicable). A list with four items: \code{g.Z$g1W} an \eqn{nx2} matrix containing values of \eqn{P(Z=1|A=1,W), P(Z=1|A=0,W)} for each observation, \code{g.Z$coef} the coefficients for the model for \eqn{g} when \code{glm} used, \code{g.Z$type} estimation procedure, \code{g.Z$discreteSL} flag}
   \item{g.Delta}{missingness mechanism estimate. A list with four items: \code{g.Delta$g1W} an \eqn{nx4} matrix containing values of \eqn{P(Delta=1|Z,A,W)} for each observation, with (Z=0,A=0), (Z=0,A=1), (Z=1,A=0),(Z=1,A=1). (When \code{Z} is \code{NULL}, columns 3 and 4 are duplicates of 1 and 2.) \code{g.Delta$coef} the coefficients for the model for \eqn{g} when \code{glm} used, \code{g.Delta$type} estimation procedure, \code{g.Delta$discreteSL} flag}
   \item{gbound}{bounds used to truncate g}
+  \item{gbound.ATT}{bounds used to truncated g for ATT and ATC estimation}
   \item{W.retained}{names of covariates used to model the components of g}
 }
 \references{

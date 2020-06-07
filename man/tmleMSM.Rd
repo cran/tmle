@@ -1,5 +1,5 @@
 \name{tmleMSM}
-\Rdversion{1.4.0.1}
+\Rdversion{1.5.0-1}
 \alias{tmleMSM}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{

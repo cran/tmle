@@ -1,4 +1,26 @@
-Changes/Bug Fixes in Version 1.4.0 and1.4.0.1
+Changes/Bug Fixes in Version 1.5.0-1
+
+-- W can now include factor variables. They will be automatically converted to indicators via a call to model matrix.
+
+ -- Bounding  g
+  -- g1W and g0W are now each bounded away from 0, but are allowed to take on the value 1.
+  -- default lower bound on g = 5/sqrt(n)/log(n) is highly recommended (manuscript in preparation)
+
+
+-- prescreenW.g functionality changed to retain all covariates associated with Y by default, instead of only those associated with the residuals
+    -- setting a new argument, RESID = TRUE,  allows replicating v1.4.0.1 behavior. That was sometimes problematic, and not recommended.
+    -- setting prescreenW.g = FALSE allows replicating behavior up until v 1.4.0, where all variables in W are used to model g
+
+ -- New arguments to better control estimation of conditional probability that outcome is observed.   
+    -- g.Delta.SL.library - SL library to use for estimating P(Delta = 1 | A, W)
+    -- g.Delta.discreteSL - TRUE/FALSE to use discrete vs. ensemble SL
+
+ -- Two new diagnostics returned: Rsquared for initial estimate of Q (Mcfadden pseudo-Rsq for binary Y), AUC for propensity scores that condidtion on retained covariates in W.
+
+ -- If upgrading from package version 1.3.x, continue reading about substantial changes introduced in version 1.4.0.1
+
+
+Changes/Bug Fixes in Version 1.4.0 and 1.4.0.1
 
 --  Default settings have changed from the previous versions, and some new arguments.
 
