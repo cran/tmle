@@ -1,5 +1,5 @@
 \name{tmleMSM}
-\Rdversion{1.5.0-1}
+\Rdversion{1.5.0.2}
 \alias{tmleMSM}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
@@ -68,7 +68,7 @@ tmleMSM(Y, A, W, V, T = rep(1,length(Y)), Delta = rep(1, length(Y)), MSM,
   \item{g_Delta}{missingness mechanism estimate. A list with three items: \code{g_Delta$g1W} an \eqn{nx2} matrix containing values of \eqn{P(Delta=1|A,V,W,T)} for each observation, \code{g_Delta$coef} the coefficients for the model for \eqn{g} when \code{glm} used, \code{g_Delta$type} estimation procedure}
 }
 \references{
-1. Gruber, S. and van der Laan, M.J. (2012), {tmle: An R Package for Targeted Maximum Likelihood Estimation}. \emph{Journal of Statistical Software}, 51(13), 1-35. \url{http://www.jstatsoft.org/v51/i13/}
+1. Gruber, S. and van der Laan, M.J. (2012), {tmle: An R Package for Targeted Maximum Likelihood Estimation}. \emph{Journal of Statistical Software}, 51(13), 1-35. \url{https://www.jstatsoft.org/v51/i13/}
 
 2. Rosenblum, M. and van der Laan, M.J. (2010), {Targeted Maximum Likelihood Estimation of the Parameter of a Marginal Structural Model}. \emph{The International Journal of Biostatistics},6(2), 2010.
 }

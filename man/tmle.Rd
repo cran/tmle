@@ -1,5 +1,5 @@
 \name{tmle}
-\Rdversion{1.5.0-1}
+\Rdversion{1.5.0.2}
 \alias{tmle}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{Targeted Maximum Likelihood Estimation}
@@ -26,7 +26,7 @@ tmle(Y, A, W, Z=NULL, Delta = rep(1,length(Y)), Q = NULL, Q.Z1 = NULL, Qform = N
   \item{Q}{optional \eqn{nx2} matrix of initial values for \eqn{Q} portion of the likelihood, \eqn{(E(Y|A=0,W), E(Y|A=1,W))}}
   \item{Q.Z1}{optional \eqn{nx2} matrix of initial values for \eqn{Q} portion of the likelihood, \eqn{(E(Y|Z=1,A=0,W), E(Y|Z=1,A=1,W))}. (When specified, values for \eqn{E(Y|Z=0,A=0,W), E(Y|Z=0,A=1,W)} are passed in using the \code{Q} argument}
  \item{Qform}{optional regression formula for estimation of \eqn{E(Y|A,W)}, suitable for call to \code{glm}}
-  \item{Qbounds}{vector of upper and lower bounds on \code{Y} and predicted values for initial \code{Q}. Defaults to the range of \code{Y}, widened by 10\% of the min and max values.}
+  \item{Qbounds}{vector of upper and lower bounds on \code{Y} and predicted values for initial \code{Q}. Defaults to the range of \code{Y}, widened by 1\% of the min and max values.}
   \item{Q.SL.library}{optional vector of prediction algorithms to use for \code{SuperLearner} estimation of initial \code{Q}}
   \item{cvQinit}{logical, if \code{TRUE}, estimates cross-validated predicted values, default=\code{TRUE}}
   \item{g1W}{optional vector of conditional treatment assingment probabilities, \eqn{P(A=1|W)}}
@@ -46,7 +46,7 @@ tmle(Y, A, W, Z=NULL, Delta = rep(1,length(Y)), Q = NULL, Q.Z1 = NULL, Qform = N
   \item{verbose}{status messages printed if set to \code{TRUE} (default=\code{FALSE})}
   \item{Q.discreteSL}{if TRUE, discreteSL is used instead of ensemble SL. Ignored when SL not used to estimate Q} 
   \item{g.discreteSL}{if TRUE, discreteSL is used instead of ensemble SL. Ignored when SL not used to estimate g1W} 
-  \item{g.Delta.discreteSL}{if TRUE, discreteSL is used instead of ensemble SL. Ignored when SL not used to estimate P(Delta = 1 | A,W,L)} 
+  \item{g.Delta.discreteSL}{if TRUE, discreteSL is used instead of ensemble SL. Ignored when SL not used to estimate P(Delta = 1 | A,W)} 
   \item{prescreenW.g}{Screen covariates before estimating g in order to retain only those associated with Stage 1 residuals}
   \item{min.retain}{Minimum number of covariates to retain when prescreening covariates for g. Ignored when prescreenW.g=FALSE} 
   \item{RESID}{Flag indicating whether to retain covariates associated with the outcome \eqn{RESID=FALSE}, or associated only with the residuals from the outcome regression. Ignored when prescreenW.g=FALSE} 
@@ -54,13 +54,13 @@ tmle(Y, A, W, Z=NULL, Delta = rep(1,length(Y)), Q = NULL, Q.Z1 = NULL, Qform = N
   \item{automate}{When TRUE, all tuning parameters are set to their default values. Number of cross validation folds and truncation level for g are set data-adaptively based on sample size (see details).}
 }
 \details{
- \code{gbounds} Lower bound defaults to lb = 5/sqrt(n)/log(n). For treatment effect estimates and population mean outcome the upper bound defaults to 1. For ATT and ATC, the upper bound defaults to 1- lb.
+ \code{gbounds} Lower bound defaults to lb = \eqn{5/sqrt(n)/log(n)}. For treatment effect estimates and population mean outcome the upper bound defaults to 1. For ATT and ATC, the upper bound defaults to 1- lb.
 
 \code{W} may contain factors. These are converted to indicators via a call to \code{model.matrix}.
 
  Controlled direct effects are estimated when binary covariate \code{Z} is non-null. The tmle function returns an object of class \code{tmle.list}, a list of two items of class \code{tmle}.  The first corresponds to estimates obtained when \code{Z} is fixed at \eqn{0}, the second corresponds to estimates obtained when \code{Z} is fixed at \eqn{1}.
 
-When automate = TRUE the sample size determines the number of cross validation folds, V: When \eqn{n <= 100}, V= 20; When \eqn{100 < n <=500} V=10; When \eqn{500 < n <= 1000} V=5; Otherwise V=3. Bounds on g set to (5/sqrt(n)/log(n), 1), except for ATT and ATE, where upper bound is 1-lower bound.
+When automate = TRUE the sample size determines the number of cross validation folds, V: \eqn{n.effective = n} for continuous \code{Y}, and 5 * size of minority class for binary \code{Y}. When \eqn{n.effective <= 30}, V= \eqn{n.effective}; When \eqn{n.effective <= 500}, V= 20; When \eqn{500 < n <=1000} V=10; When \eqn{1000 < n <= 10000} V=5; Otherwise V=2. Bounds on \code{g} set to \eqn{(5/sqrt(n)/log(n), 1)}, except for ATT and ATE, where upper bound is 1-lower bound.
 }
 \value{
   \item{estimates}{list with elements EY1 (population mean), ATE (additive treatment effect), ATT (additive treatment effect among the treated), ATC (additive treatment effect among the controls), RR (relative risk), OR (odds ratio). Each element in the estimates of these is itself a list containing 
@@ -82,17 +82,17 @@ When automate = TRUE the sample size determines the number of cross validation f
   \item{W.retained}{names of covariates used to model the components of g}
 }
 \references{
-1. Gruber, S. and van der Laan, M.J. (2012), {tmle: An R Package for Targeted Maximum Likelihood Estimation}. \emph{Journal of Statistical Software}, 51(13), 1-35. \url{http://www.jstatsoft.org/v51/i13/}
+1. Gruber, S. and van der Laan, M.J. (2012), {tmle: An R Package for Targeted Maximum Likelihood Estimation}. \emph{Journal of Statistical Software}, 51(13), 1-35. \url{ https://www.jstatsoft.org/v51/i13/}
 
-2. Gruber, S. and van der Laan, M.J. (2009), {Targeted Maximum Likelihood Estimation: A Gentle Introduction}. \emph{U.C. Berkeley Division of Biostatistics Working Paper Series}.  Working Paper 252.  \url{http://www.bepress.com/ucbbiostat/paper252}
+2. Gruber, S. and van der Laan, M.J. (2009), {Targeted Maximum Likelihood Estimation: A Gentle Introduction}. \emph{U.C. Berkeley Division of Biostatistics Working Paper Series}.  Working Paper 252.  \url{https://biostats.bepress.com/ucbbiostat/paper252/}
 
 3. Gruber, S. and van der Laan, M.J.  (2010), {A Targeted Maximum Likelihood Estimator of a Causal Effect on a Bounded Continuous Outcome}. \emph{The International Journal of Biostatistics}, 6(1), 2010.
 
 4. Rosenblum, M. and van der Laan, M.J. (2010).{Targeted Maximum Likelihood Estimation of the Parameter of a Marginal Structural Model}. \emph{The International Journal of Biostatistics}, 6(2), 2010.
 
-5. van der Laan, M.J. and Rubin, D. (2006), {Targeted Maximum Likelihood Learning}. \emph{The International Journal of Biostatistics}, 2(1). \url{http://www.bepress.com/ijb/vol2/iss1/11/}
+5. van der Laan, M.J. and Rubin, D. (2006), {Targeted Maximum Likelihood Learning}. \emph{The International Journal of Biostatistics}, 2(1). \url{https://biostats.bepress.com/ucbbiostat/paper252/}
 
-6. van der Laan, M.J., Rose, S., and Gruber,S., editors, (2009) {Readings in Targeted Maximum Likelihood Estimation} . \emph{U.C. Berkeley Division of Biostatistics Working Paper Series}.  Working Paper 254. \url{http://www.bepress.com/ucbbiostat/paper254}
+6. van der Laan, M.J., Rose, S., and Gruber,S., editors, (2009) {Readings in Targeted Maximum Likelihood Estimation} . \emph{U.C. Berkeley Division of Biostatistics Working Paper Series}.  Working Paper 254. \url{https://biostats.bepress.com/ucbbiostat/paper254/}
 
 7. van der Laan, M.J. and Gruber S. (2016), {One-Step Targeted Minimum Loss-based Estimation Based on Universal Least Favorable One-Dimensional Submodels}. \emph{The International Journal of Biostatistics}, 12 (1), 351-378.
 }

@@ -1,3 +1,10 @@
+Changes/Bug Fixes in Version 1.5.0.2
+
+-- Minor bug fixes
+  -- Fixed bug when using dbarts to predict missingness probabilities
+  -- Covariates no longer prescreened when g.Deltaform is supplied
+-- Automatic setting for V revised (see details in tmle function documentation)
+
 Changes/Bug Fixes in Version 1.5.0-1
 
 -- W can now include factor variables. They will be automatically converted to indicators via a call to model matrix.

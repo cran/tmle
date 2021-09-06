@@ -9,7 +9,7 @@ citEntry(entry = "Article",
   volume       = "51",
   number       = "13",
   pages        = "1--35",
-  url          = "http://www.jstatsoft.org/v51/i13/",
+  url          = "https://www.jstatsoft.org/v51/i13/",
   note          = "doi:10.18637/jss.v051.i13", 
   textVersion  =
   paste("Susan Gruber, Mark J. van der Laan (2012).",

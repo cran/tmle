@@ -328,36 +328,33 @@ tmle.SL.dbarts2 <-  function(Y, X, newX, family, obsWeights, id, sigest = NA, si
     if (!requireNamespace("dbarts", quietly = FALSE)) {
         stop("Loading required package dbarts failed", call. = FALSE)
     }
-  	model = dbarts::bart(x.train = X,  y.train = Y,   x.test = newX, sigest = sigest,  sigdf = sigdf, sigquant = sigquant,
-                 k = k,  power = power, base = base,  binaryOffset = binaryOffset,   weights = obsWeights,  ntree = ntree,
-                 ndpost = ndpost,   nskip = nskip,   printevery = printevery,  keepevery = keepevery,  keeptrainfits = keeptrainfits,
-                 usequants = usequants,   numcut = numcut,   printcutoffs = printcutoffs,  nthread = nthread, keepcall = keepcall,
-                 keeptrees = TRUE,  verbose = verbose)
- 
- 	 if (family$family == "gaussian") {
-    	pred = colMeans(model$yhat.test)
- 	 }  
-  	if (family$family == "binomial") {
-    	pred = colMeans(stats::pnorm(model$yhat.test))
-  	}
- 	 fit = list(object = model)
-  	class(fit) = c("tmle.SL.dbarts2")
-  	out = list(pred = pred, fit = fit)
-  	return(out)
+   model = dbarts::bart(x.train = X, y.train = Y, x.test = newX, 
+        sigest = sigest, sigdf = sigdf, sigquant = sigquant, 
+        k = k, power = power, base = base, binaryOffset = binaryOffset, 
+        weights = obsWeights, ntree = ntree, ndpost = ndpost, 
+        nskip = nskip, printevery = printevery, keepevery = keepevery, 
+        keeptrainfits = keeptrainfits, usequants = usequants, 
+        numcut = numcut, printcutoffs = printcutoffs, nthread = nthread, 
+        keepcall = keepcall, keeptrees = TRUE, verbose = verbose)
+    if (family$family == "gaussian") {
+        pred = model$yhat.test.mean
+    }
+    if (family$family == "binomial") {
+        pred = colMeans(stats::pnorm(model$yhat.test))
+    }
+    invisible(model$fit$state)
+    fit = list(object = model)
+    class(fit) = c("tmle.SL.dbarts2")
+    out = list(pred = pred, fit = fit)
+    return(out)
+
 }
 
 predict.tmle.SL.dbarts2 <- function(object, newdata, family, ...) {
     if (!requireNamespace("dbarts", quietly = FALSE)) {
         stop("Loading required package dbarts failed", call. = FALSE)
     }
-     pred = predict(object$object, test = newdata) 
-   if (family$family == "gaussian") {
-    	pred = colMeans(pred) 
- 	 }  
-  	if (family$family == "binomial") {
-    	pred = colMeans(stats::pnorm(pred))
-  	}
- 
+     pred = colMeans(predict(object$object, newdata = newdata) ) 
   return(pred)
 }
 #-------------------------------------------------------------
@@ -1476,11 +1473,17 @@ tmle <- function(Y,A,W, Z=NULL, Delta=rep(1,length(Y)),
 		prescreenW.g <- TRUE
 		target.gwt <- TRUE
 		gbound <- 5/sqrt(n)/log(n)
-		if (n <= 100) {
+		n.effective <- sum(Delta)
+		if (family == "binomial"){
+			n.effective <- min(c(table(Y[Delta == 1])*5, n.effective))
+		}
+		if(n.effective <= 30){
+			V <- n.effective 
+		} else if (n.effective <= 500) {
 			V <- 20
-		} else if (n <= 500) {
+		} else if (n.effective <= 1000) {
 			V <- 10
-		} else if (n <= 1000) {
+		} else if (n.effective <= 10000){
 			V <- 5
 		} else {
 			V <- 2
@@ -1567,8 +1570,9 @@ tmle <- function(Y,A,W, Z=NULL, Delta=rep(1,length(Y)),
   		g.z$type="No intermediate variable"
   		g.z$coef=NA
   		# if prescreenW.g, keep all the variables in the g.Deltaform, or keep a minimum of 2 variables. Always keep A.
-  		
-  		  		
+  		if (!is.null(g.Deltaform)){
+  			retain.W.Delta <- 1:NCOL(W)
+  		}		
   		g.Delta <- suppressWarnings(estimateG(d=data.frame(Delta, Z=1, A, W[,retain.W]), pDelta1, g.Deltaform, 
  	 		SL.library = g.Delta.SL.library, id=id, V = V, verbose = verbose, "missingness mechanism", outcome="D",  discreteSL= g.Delta.discreteSL)) 
  		g1W.total <- .bound(g$g1W*g.Delta$g1W[,"Z0A1"], g$bound)
