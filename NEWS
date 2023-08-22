@@ -1,3 +1,12 @@
+Changes/Bug Fixes in Version 2.0.0
+
+-- New option to specify observation weights for biased sampling, 2-stage designs (tmle and tmleMSM)
+-- Option for Targeted bootstrap inference in addition to IC-based inference by setting B to a value >1 
+  -- does not require additional calls to SL, so not too time-consuming
+  -- option to specify significance level other than alpha = 0.05
+-- Ability to specify separate values for the number of cv folds for Q,g, g_Delta.
+-- Other minor updates, see help files for details
+
 Changes/Bug Fixes in Version 1.5.0.2
 
 -- Minor bug fixes

@@ -1,5 +1,4 @@
 \name{estimateG}
-\Rdversion{1.5.0.2}
 \alias{estimateG}
 \title{Estimate Treatment or Missingness Mechanism}
 \description{
@@ -7,7 +6,7 @@ An internal function called by the \code{tmle} function to obtain an estimate of
 }
 \usage{
 estimateG(d, g1W, gform, SL.library, id, V, verbose, message, 
-	outcome, newdata=d, discreteSL)
+	outcome="A", newdata=d, discreteSL, obsWeights)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -22,6 +21,7 @@ estimateG(d, g1W, gform, SL.library, id, V, verbose, message,
   \item{outcome}{\code{A, D, Z} to indicate which quantity is being estimated.}
   \item{newdata}{optional dataset to be used for prediction after fitting on \code{d}.}
   \item{discreteSL}{If true, returns discrete SL estimates, otherwise ensemble estimates. Ignored when SL is not used.}
+  \item{obsWeights}{sampling weights}
 }
 \value{
  \item{g1W}{a vector containing values for \eqn{P(A=1|W)}, matrix for \eqn{P(Z=1|A,W)}, evaluated at A=0, A=1, or matrix \eqn{P(Delta=1|Z,A,W))} evaluated at (0,0), (0,1), (1,0), (1,1)}

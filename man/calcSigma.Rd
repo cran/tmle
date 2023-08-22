@@ -1,5 +1,4 @@
 \name{calcSigma}
-\Rdversion{1.5.0.2}
 \alias{calcSigma}
 \title{Calculate Variance-Covariance Matrix for MSM Parameters (calcSigma)}
 \description{
@@ -11,9 +10,9 @@ calcSigma(hAV, gAVW, Y, Q, mAV, covar.MSM, covar.MSMA0, covar.MSMA1, I.V,
 }
 \arguments{
   \item{hAV}{values used in numerator of weights applied to the estimation procedure}
-  \item{gAVW}{\eqn{p(A=a | V,W,T)*p(Delta=1 | A,V,W,T}}
+  \item{gAVW}{\eqn{P(A=a | V,W,T)*P(Delta=1 | A,V,W,T)}}
   \item{Y}{continuous or binary outcome variable}
-  \item{Q}{estimated \eqn{P(Y | A, V, W, T, Delta=1}, typically targeted values \code{Q*} are passed in}
+  \item{Q}{estimated \eqn{P(Y | A, V, W, T, Delta=1)}, typically targeted values \code{Q*} are passed in}
   \item{mAV}{predicted values for \eqn{EY1} from the MSM using the targeted estimates for \eqn{psi}}
   \item{covar.MSM}{covariate values used as predictors for the MSM when \code{A=a}}
   \item{covar.MSMA0}{covariate values used as predictors for the MSM when \code{A=0}}

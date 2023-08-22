@@ -1,5 +1,4 @@
 \name{tmle.SL.dbarts2}
-\Rdversion{1.5.0.2}
 \alias{tmle.SL.dbarts2}
 \alias{tmle.SL.dbarts.k.5}
 \alias{predict.tmle.SL.dbarts2}

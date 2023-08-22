@@ -1,5 +1,4 @@
 \name{estimateQ}
-\Rdversion{1.5.0.2}
 \alias{estimateQ}
 \title{
 Initial Estimation of Q portion of the Likelihood}
@@ -8,7 +7,7 @@ An internal function called by the \code{tmle} function to obtain an initial est
 }
 \usage{
 estimateQ(Y, Z, A, W, Delta, Q, Qbounds, Qform, maptoYstar, SL.library, cvQinit, 
-    family, id, V, verbose, discreteSL)
+    family, id, V, verbose, discreteSL, obsWeights)
 }
 \arguments{
   \item{Y}{continuous or binary outcome variable}
@@ -27,6 +26,7 @@ estimateQ(Y, Z, A, W, Delta, Q, Qbounds, Qform, maptoYstar, SL.library, cvQinit,
   \item{V}{Number of cross-validation folds for Super Learning}
   \item{verbose}{status message printed if set to \code{TRUE}}
   \item{discreteSL}{If true, returns discrete SL estimates, otherwise ensemble estimates. Ignored when SL is not used.}
+  \item{obsWeights}{sampling weights}
 }
 \value{
   \item{Q}{\eqn{nx3} matrix, columns contain the initial estimate of \eqn{[Q(A,W)=E(Y|A=a,W), Q(0,W)=E(Y|A=0,W), Q(1,W)=E(Y|A=1,W)]}. For controlled direct estimation, \eqn{nx5} matrix, \eqn{E(Y|Z,A,W)}, evaluated at \eqn{(z,a), (0,0), (0,1), (1,0), (1,1)} on scale of linear predictors}

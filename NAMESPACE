@@ -1,7 +1,7 @@
 ## name spaces needed for S3 methods
 importFrom("stats", "as.formula", "binomial", "coef", "formula",
              "gaussian", "glm", "model.frame", "model.matrix", "plogis",
-             "pnorm", "poisson", "predict", "qlogis", "var", "cor")
+             "pnorm", "poisson", "predict", "qlogis", "var", "cor", "qnorm","quantile")
 importFrom("utils", "RShowDoc", "packageDescription")
 import(glmnet)
 import(SuperLearner)

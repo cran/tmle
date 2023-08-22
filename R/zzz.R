@@ -1,6 +1,6 @@
 .onAttach = function(libname, pkgname) {
 packageStartupMessage(
-        "Welcome to the tmle package, version 1.5.0-1.1
+        "Welcome to the tmle package, version 2.0.0
 
-Major changes since v1.3.x. Use tmleNews() to see details on changes and bug fixes"
+Use tmleNews() to see details on changes and bug fixes"
 )}

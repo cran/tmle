@@ -1,12 +1,11 @@
 \name{oneStepATT}
-\Rdversion{1.5.0.2}
 \alias{oneStepATT}
 \title{Calculate Additive treatment effect among the treated (oneStepATT)}
 \description{
 An internal function called by the \code{tmle} function to calculate the additive treatment effect among the treated (ATT) using a universal least favorable submodel (on the transformed scale if outcomes are continuous). The function is called a second time with updated arguments to calculate the additive treatment effect among the controls (ATC). Missingness in the outcome data is allowed.
 }
 \usage{
-oneStepATT(Y, A, Delta, Q, g1W, pDelta1, depsilon, max_iter, gbounds, Qbounds)
+oneStepATT(Y, A, Delta, Q, g1W, pDelta1, depsilon, max_iter, gbounds, Qbounds, obsWeights)
 }
 \arguments{
   \item{Y}{continuous or binary outcome variable}
@@ -19,6 +18,7 @@ oneStepATT(Y, A, Delta, Q, g1W, pDelta1, depsilon, max_iter, gbounds, Qbounds)
   \item{max_iter}{maximum number of iterations before terminating without convergence}
   \item{gbounds}{bounds on the propensity score for untreated subjects}
   \item{Qbounds}{alpha bounds on the logit scale}
+  \item{obsWeights}{sampling weights}
 }
 \value{
   \item{psi}{effect estimate (on the transformed scale for continuous outcomes)}

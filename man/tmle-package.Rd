@@ -1,19 +1,10 @@
 \name{tmle-package}
-\Rdversion{1.5.0.2}
+\Rdversion{2.0.0}
 \alias{tmle-package}
 \docType{package}
 \title{Targeted Maximum Likelihood Estimation with Super Learning}
 \description{
 Targeted maximum likelihood estimation of marginal treatment effect of a binary point treatment on a continuous or binary outcome, adjusting for baseline covariates (ATE: entire population, ATT: treated population, ATC: control population). Missingness in the outcome is accounted for in the estimation procedure. The population mean outcome is calculated when there is missingness and no treatment.  Controlled direct effect estimation is available, and MSM parameter estimation for binary point treatment effects. Optional data-adaptive estimation of \emph{Q} and \emph{g} portions of the likelihood using the \code{SuperLearner} package is strongly encouraged.}
-\details{
-\tabular{ll}{
-Package: \tab tmle\cr
-Type: \tab Package\cr
-Version: \tab 1.5.0-1\cr
-Date: \tab 2020-05-19\cr
-License: \tab BSD | GPL-2 \cr
-} 
-}
 \author{
 Susan Gruber, in collaboration with Mark van der Laan.
 
@@ -33,7 +24,10 @@ Maintainer: Susan Gruber, \email{sgruber@cal.berkeley.edu}
 6. van der Laan, M.J., Rose, S., and Gruber,S., editors, (2009) {Readings in Targeted Maximum Likelihood Estimation} . \emph{U.C. Berkeley Division of Biostatistics Working Paper Series}.  Working Paper 254. \url{https://biostats.bepress.com/ucbbiostat/paper254/}
 
 7. van der Laan, M.J. and Gruber S. (2016), {One-Step Targeted Minimum Loss-based Estimation Based on Universal Least Favorable One-Dimensional Submodels}. \emph{The International Journal of Biostatistics}, 12 (1), 351-378.
+
+8. Gruber, S., Phillips, R.V., Lee, H., van der Laan, M.J. Data-Adaptive Selection of the Propensity Score Truncation Level for Inverse Probability Weighted and Targeted Maximum Likelihood Estimators of Marginal Point Treatment Effects. \emph{American Journal of Epidemiology} 2022; 191(9), 1640-1651.
 }
+
 \seealso{
 \code{\link{tmle}},
 \code{\link{tmleMSM}}
