@@ -1,6 +1,6 @@
 Package: tmle
-Version: 2.0.0
-Date: 2023-08-05
+Version: 2.0.1
+Date: 2024-04-26
 Title: Targeted Maximum Likelihood Estimation
 Authors@R: c(person("Susan", "Gruber", role = c("aut", "cre"), 
 				email = "sgruber@cal.berkeley.edu"),
@@ -20,6 +20,6 @@ Description: Targeted maximum likelihood estimation of point treatment effects (
 License: BSD_3_clause + file LICENSE | GPL-2
 URL: https://CRAN.R-project.org/package=tmle
 NeedsCompilation: no
-Packaged: 2023-08-22 15:04:40 UTC; susan
+Packaged: 2024-04-30 17:58:02 UTC; susan
 Repository: CRAN
-Date/Publication: 2023-08-22 21:00:02 UTC
+Date/Publication: 2024-05-02 08:50:03 UTC

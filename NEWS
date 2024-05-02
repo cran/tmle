@@ -1,3 +1,9 @@
+Changes/Bug Fixes in Version 2.0.1
+
+-- Modified procedure for evaluating average effect among the treated (ATT) and controls (ATC) to improve finite sample bias and variance by trimming controls outside the distribution of W among the treated
+-- Now returns EY1 and EY0 parameter estimates and inference
+-- Fixed bug that crashed tmleMSM when setting "inference=FALSE"
+
 Changes/Bug Fixes in Version 2.0.0
 
 -- New option to specify observation weights for biased sampling, 2-stage designs (tmle and tmleMSM)

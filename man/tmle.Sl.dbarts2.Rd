@@ -18,12 +18,12 @@ tmle.SL.dbarts.k.5(Y, X, newX, family, obsWeights, id, sigest = NA, sigdf = 3,
 \method{predict}{tmle.SL.dbarts2}(object, newdata, family, \ldots)
 }
 \arguments{
- \item{Y}{Dependent variable}
+\item{Y}{Dependent variable}
 \item{X}{Predictor covariate matrix or data frame used as training set}
 \item{newX}{Predictor covariate matrix or data frame for which predictions should be made}
 \item{family}{Regression family, 'gaussian' or 'binomial'}
 \item{obsWeights}{observation-level weights}
-\item{id}{id}{id to group observations, not used}
+\item{id}{identifier to group observations, not used}
 \item{sigest}{An estimate of error variance. See \code{bart} documentation}
 \item{sigdf}{Degrees of freedom for error variance prior. See \code{bart} documentation}
 \item{sigquant}{Quantile of error variance prior. See \code{bart} documentation}
@@ -44,11 +44,11 @@ tmle.SL.dbarts.k.5(Y, X, newX, family, obsWeights, id, sigest = NA, sigdf = 3,
 \item{keepcall}{Returns the call to BART when \code{TRUE}}
 \item{verbose}{Ignored for now}
 \item{\ldots}{Additional arguments passed on to plot or control functions}
-\item{object}{object of type tmle.SL.dbarts2}
-\item{newdata}{matrix or dataframe used to get predictions from the fitted model}
+\item{object}{Object of type tmle.SL.dbarts2}
+\item{newdata}{Matrix or dataframe used to get predictions from the fitted model}
 }
 \value{
-{object}{an object of type tmle.SL.dbarts2 used internally by \code{Super Learner}}
+an object of type tmle.SL.dbarts2 used internally by \code{Super Learner}
 }
 \details{\code{tmle.SL.dbarts2} is in the default library for estimating \eqn{Q}. It uses the default setting in the \code{dbarts} package, \eqn{k=2}. \code{tmle.SL.dbarts.k.5} is used to estimate the components of \eqn{g}. It sets \eqn{k=0.5}, to avoid shrinking predicted values too far from \eqn{(0,1)}. See \code{bart} documentation for more information.
 }

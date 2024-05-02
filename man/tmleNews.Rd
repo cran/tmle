@@ -1,5 +1,5 @@
 \name{tmleNews}
-\Rdversion{2.0.0}
+\Rdversion{2.0.1}
 \alias{tmleNews}
 \title{Show the NEWS file (tmleNews)}
 \description{

@@ -19,7 +19,7 @@ estimateQ(Y, Z, A, W, Delta, Q, Qbounds, Qform, maptoYstar, SL.library, cvQinit,
   \item{Qbounds}{Bounds on predicted values for \code{Q}, set to \code{alpha} for logistic fluctuation, or \code{range(Y)} if not user-supplied}
   \item{Qform}{regression formula of the form \code{Y~A+W}}
   \item{maptoYstar}{if \code{TRUE} indicates continuous \code{Y} values should be shifted and scaled to fall between (0,1)}
-  \item{SL.library}{specification of prediction algorithms, default is {(\sQuote{SL.glm}, \sQuote{SL.glmnet}, \sQuote{tmle.SL.dbarts2})}. In practice, including more prediction algorithms in the library improves results.}
+  \item{SL.library}{specification of prediction algorithms, default is (\sQuote{SL.glm}, \sQuote{SL.glmnet}, \sQuote{tmle.SL.dbarts2}). In practice, including more prediction algorithms in the library improves results.}
  \item{cvQinit}{logical, whether or not to estimate cross-validated values for initial \code{Q}, default=\code{TRUE}}
   \item{family}{family specification for regressions, generally \sQuote{gaussian} for continuous oucomes, \sQuote{binomial} for binary outcomes}
   \item{id}{subject identifier}
