@@ -1225,7 +1225,7 @@ estimateQ <- function (Y,Z,A,W, Delta, Q, Qbounds, Qform, maptoYstar,
 	  	  		}
 	  	  		type="cv-glm, user-supplied model"
   	  		} else {
-	  	  		m <- suppressWarnings(glm(Qform, data=data.frame(Y,Z,A,W, Delta), family=family, subset=Delta==1, weights = obsWeights[Delta == 1]))
+	  	  		m <- suppressWarnings(glm(Qform, data=data.frame(Y,Z,A,W, Delta), family=family, subset=Delta==1, weights = obsWeights))
 	  	  		Q[,"QAW"] <- predict(m, newdata=data.frame(Y,Z,A,W), type="response")
 	  	  		Q[,"Q0W"] <- predict(m, newdata=data.frame(Y,Z=0,A=0,W), type="response")
 	  	  		Q[,"Q1W"] <- predict(m, newdata=data.frame(Y,Z=0,A=1,W), type="response")
@@ -2013,13 +2013,13 @@ tmle <- function(Y,A,W, Z=NULL, Delta=rep(1,length(Y)),
 	        						depsilon = depsilon, max_iter = max(1000, 2/depsilon), gbounds = gbound.ATT, 
 	        						Qbounds = stage1$Qbound, obsWeights = obsWeights.curATT))
 	        		
-	        	   	   			pDelta1.ATC <- g.Delta$g1W[b.ATC.rows,c("Z0A0", "Z0A1")]
+	        	pDelta1.ATC <- g.Delta$g1W[b.ATC.rows,c("Z0A0", "Z0A1")]
    	   			if(mean(Delta[ATC.rows]) > 0.95){
    	   				pDelta1.ATC[,1] <- mean(Delta[A[b.ATC.rows] ==0])
    	   				pDelta1.ATC[,2] <- mean(Delta[A[b.ATC.rows] ==1])
    	   			} else {
-					pDelta1.ATC[,1] <- predict(glm(A[b.ATC.rows,1] ~ 1 + offset(qlogis(pDelta1.ATC[,1])), family = "binomial"), type = "response")
-					pDelta1.ATC[,2] <- predict(glm(A[b.ATC.rows,2] ~ 1 + offset(qlogis(pDelta1.ATC[,2])), family = "binomial"), type = "response")
+					pDelta1.ATC[,1] <- predict(glm(Delta[b.ATC.rows] ~ 1 + offset(qlogis(pDelta1.ATC[,1])), family = "binomial"), type = "response")
+					pDelta1.ATC[,2] <- predict(glm(Delta[b.ATC.rows] ~ 1 + offset(qlogis(pDelta1.ATC[,2])), family = "binomial"), type = "response")
 				}
    	   			res.ATC <- try(oneStepATT(Y = stage1$Ystar[b.ATC.rows], A = 1-A[b.ATC.rows], Delta[b.ATC.rows], 
    	   								Q = cbind(QAW = Q.ATT[b.ATC.rows,1], Q0W = Q.ATT[b.ATC.rows,"Q1W"], Q1W = Q.ATT[b.ATC.rows,"Q0W"]), 
